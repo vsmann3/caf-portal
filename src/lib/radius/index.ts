@@ -12,7 +12,7 @@ export function defaultRadiusConfig(): RadiusConfig {
 export async function getRadiusConfig(): Promise<RadiusConfig> {
   const row = await prisma.systemSetting.findUnique({ where: { key: RADIUS_SETTING_KEY } });
   if (!row) return defaultRadiusConfig();
-  return row.value as RadiusConfig;
+  return row.value as unknown as RadiusConfig;
 }
 
 export function getRadiusAdapter(_config: RadiusConfig): RadiusAdapter {

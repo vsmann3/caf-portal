@@ -66,7 +66,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         data: {
           applicationId: id,
           status: "PENDING",
-          requestPayload: buildRadiusPayload(existing, existing.franchise),
+          requestPayload: buildRadiusPayload(existing, existing.franchise) as any,
         },
       });
       if (config.enabled) {
