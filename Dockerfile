@@ -22,6 +22,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN mkdir -p public && node node_modules/prisma/build/index.js generate && npm run build
+RUN node node_modules/typescript/bin/tsc prisma/seed.ts --outDir seed-runtime --module commonjs --target ES2020 --esModuleInterop --skipLibCheck
 # The runner gets its production tree below; discard redundant traced copies
 # instead of merging any extra traced dependencies back into that tree.
 RUN rm -rf .next/standalone/node_modules
@@ -40,6 +41,7 @@ COPY --from=production-deps /app/node_modules ./node_modules
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/seed-runtime ./seed-runtime
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x docker-entrypoint.sh && mkdir -p /app/storage && chown -R appuser:appgroup /app/storage
 

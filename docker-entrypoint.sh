@@ -21,7 +21,13 @@ fi
 
 if [ "${RUN_SEED:-0}" = "1" ]; then
   echo "Seeding initial data…"
-  node prisma/seed.js 2>/dev/null || npx tsx prisma/seed.ts || true
+  if node seed-runtime/prisma/seed.js; then
+    echo "Initial account seeding completed."
+  else
+    status=$?
+    echo "Startup failed: initial account seeding exited with status $status; Next.js will not start." >&2
+    exit "$status"
+  fi
 fi
 
 echo "Starting CAF Portal…"

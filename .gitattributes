@@ -1,1 +1,2 @@
 *.sh text eol=lf
+prisma/migrations/** text eol=lf

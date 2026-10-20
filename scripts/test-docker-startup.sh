@@ -81,7 +81,9 @@ docker run -d --name "$app" --network "$network" \
   -p 127.0.0.1::3000 \
   -e DATABASE_URL="postgresql://smoke:smoke@$db:5432/smoke" \
   -e AUTH_SECRET='isolated-smoke-test-secret-never-use-in-production' \
-  -e RUN_SEED=0 "$image" >/dev/null
+  -e RUN_SEED=1 \
+  -e SEED_SUPER_ADMIN_EMAIL=caf-smoke@example.test \
+  -e SEED_SUPER_ADMIN_PASSWORD=isolated-test-password-2026 "$image" >/dev/null
 port=$(docker inspect -f '{{(index (index .NetworkSettings.Ports "3000/tcp") 0).HostPort}}' "$app")
 attempt=0
 until [ "$(curl --noproxy '*' --max-time 3 -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/login" || true)" = 200 ]; do
@@ -90,5 +92,24 @@ until [ "$(curl --noproxy '*' --max-time 3 -s -o /dev/null -w '%{http_code}' "ht
   sleep 1
 done
 test "$(curl --noproxy '*' --max-time 3 -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/")" = 307
+docker exec -i "$app" node <<'NODE'
+const assert = require('node:assert/strict');
+(async () => {
+  const response = await fetch('http://127.0.0.1:3000/api/auth/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: process.env.SEED_SUPER_ADMIN_EMAIL, password: process.env.SEED_SUPER_ADMIN_PASSWORD }),
+  });
+  assert.equal(response.status, 200, 'Seeded admin login must succeed');
+  const cookie = response.headers.get('set-cookie')?.split(';')[0];
+  assert(cookie?.startsWith('caf_session='), 'Login must create a session');
+  const dashboard = await fetch('http://127.0.0.1:3000/dashboard', {
+    headers: { Cookie: cookie }, redirect: 'manual',
+  });
+  assert.equal(dashboard.status, 200, 'Authenticated dashboard must load');
+  const html = await dashboard.text();
+  assert.match(html, /Platform Overview/);
+  console.log('PASS: initial schema, seeded admin login, session cookie and authenticated dashboard.');
+})().catch(error => { console.error(error.message); process.exitCode = 1; });
+NODE
 docker logs "$app"
 echo 'PASS: locked Prisma 6, offline CLI, migration failure exit, /login HTTP 200, / HTTP 307.'

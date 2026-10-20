@@ -48,6 +48,10 @@ On first run with `RUN_SEED=1` in `.env`/environment, the entrypoint runs migrat
 
 **Change all default passwords immediately.**
 
+`SEED_SUPER_ADMIN_EMAIL` and `SEED_SUPER_ADMIN_PASSWORD` are used to create the initial database account when `RUN_SEED=1`; they are not a separate login mechanism. Changing these variables does not reset an existing account password. After initial creation, set `RUN_SEED=0`. The Docker image includes compiled seed code, and a requested seed failure stops startup rather than being ignored.
+
+The initial migration creates the application tables on a fresh database. An existing installation whose tables were created outside Prisma Migrate needs a reviewed migration baseline before deploying this initial migration; do not reset the database or blindly mark migrations applied.
+
 ### 3) Access
 
 Open [http://localhost:3000](http://localhost:3000) (or your server IP).

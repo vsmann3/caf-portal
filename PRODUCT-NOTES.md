@@ -29,7 +29,7 @@ These requirements do not imply that a generated PDF, a provider response, or th
 
 | Priority | Finding from the review | Impact / next action |
 | --- | --- | --- |
-| High | No checked-in `prisma/migrations` files. | Establish versioned migrations and an installation/upgrade procedure. Handle existing databases deliberately; never reset or reinitialise production to create a baseline. |
+| High | At initial review, no checked-in `prisma/migrations` files existed. | The login repair adds an initial migration for fresh databases. Existing databases whose application tables were created outside Prisma Migrate still need a reviewed baseline; never reset or reinitialise production to create one. |
 | High | Storage settings pages and API exist locally but were untracked at review time. | Review, test and commit them before treating the settings UI as a deployed feature. |
 | High | RADIUS adapter is a no-op returning success with `SKIPPED`. | A successful-looking sync does not prove subscriber creation. Represent disabled/unimplemented integration honestly; implement real adapters, idempotency, durable retries and visible errors. |
 | High | Documents store a provider name/key, but reads resolve the current provider configuration. | A changed local path, S3 bucket or endpoint can break older documents. Persist a reference to an immutable/versioned storage location. |

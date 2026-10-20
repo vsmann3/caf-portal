@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
  */
 async function main() {
   const superEmail =
-    process.env.SEED_SUPER_ADMIN_EMAIL ?? "superadmin@example.com";
+    (process.env.SEED_SUPER_ADMIN_EMAIL ?? "superadmin@example.com").trim().toLowerCase();
   const superPassword =
     process.env.SEED_SUPER_ADMIN_PASSWORD ?? "ChangeMe@123";
 
@@ -80,9 +80,9 @@ async function main() {
   });
 
   console.log("Seed complete.");
-  console.log(`  Super admin:    ${superEmail} / ${process.env.SEED_SUPER_ADMIN_PASSWORD ?? "ChangeMe@123"}`);
-  console.log(`  Company admin:  admin@infolink.example / ChangeMe@123`);
-  console.log(`  Franchise user: franchise@infolink.example / ChangeMe@123`);
+  console.log(`  Super admin:    ${superEmail}`);
+  console.log(`  Company admin:  admin@infolink.example`);
+  console.log(`  Franchise user: franchise@infolink.example`);
   console.log(`  Super admin id: ${superAdmin.id}`);
   console.log("  ⚠ Change all default passwords immediately after first login.");
 }

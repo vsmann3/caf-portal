@@ -1,5 +1,15 @@
 # Change log
 
+## 2026-10-20: initialise schema and seed accounts
+
+- Diagnose login failure as Prisma `P2021`: the inspected deployment had only `_prisma_migrations`, with no application tables. Seed credentials in the environment do not create a user unless initial seeding succeeds.
+- Add the initial PostgreSQL schema migration generated from the existing Prisma schema with the locked Prisma 6.19.3 CLI. The SQL creates tables, enums, indexes and constraints; it contains no data deletion or table drops. Existing-schema installations require a reviewed migration baseline rather than a reset.
+- Compile the existing seed program and its password helper into the Docker image. Invoke it directly with Node when `RUN_SEED=1`; remove the `npx tsx` download fallback and stop startup on seed failure.
+- Normalise the initial super-admin email and remove passwords from seed log messages. Preserve the existing rule that reseeding does not replace an existing account's password.
+- Document seed credential behaviour, add a credential-safe read-only diagnostic, and extend startup tests to cover seed failure/success and authenticated login/dashboard access.
+
+Validation: a clean Docker build passed. Against a disposable PostgreSQL 16 database, Prisma 6.19.3 applied the initial migration, compiled account seeding completed, configured-admin login returned HTTP 200 with a session cookie, and the authenticated dashboard returned HTTP 200. Offline CLI, migration-failure exit, `/login` HTTP 200 and `/` HTTP 307 checks also passed. All six local startup tests passed, including seed success and seed failure. The live database has only been queried; no application schema or accounts have been created there by this work.
+
 ## 2026-10-20: production migration startup
 
 - Make `prisma` a production dependency and regenerate lockfile metadata. The locked CLI remains `6.19.3`; existing package versions, download URLs and integrity hashes are unchanged.
@@ -18,7 +28,7 @@ Validation on an isolated Linux Docker host:
 - Against a disposable PostgreSQL 16 database, migration checks succeeded before Next.js started. `/login` returned HTTP `200`; `/` returned HTTP `307`.
 - All four local lockfile/startup tests, shell syntax checks and Git whitespace checks passed.
 
-The repository currently has no checked-in `prisma/migrations` files. The successful startup test reported no pending migrations; it does not prove initialization of the application schema. Seeding was disabled for the test. Existing deployments, databases, volumes, uploaded documents and `.env` files were not modified.
+At the time of that validation, the repository had no checked-in `prisma/migrations` files. That startup test reported no pending migrations and did not prove initialization of the application schema. Seeding was disabled for that test. The subsequent login repair above adds the migration and authenticated first-login coverage. Existing deployments, databases, volumes, uploaded documents and `.env` files were not modified by that startup test.
 
 Reproduce with `bash scripts/test-docker-startup.sh`; use `CAF_TEST_IMAGE=<image>` to run the checks against an already-built image.
 
