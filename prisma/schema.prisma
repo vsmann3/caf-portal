@@ -1,0 +1,307 @@
+// Multi-tenant CAF Portal schema.
+// Multi-tenancy strategy: shared schema, every tenant-scoped row carries companyId.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN      // you — the ISP owner. Manages companies + global settings.
+  COMPANY_ADMIN    // e.g. Infolink Broadband admin. Manages own franchises/users.
+  FRANCHISE_USER   // franchise counter staff. Limited to own franchise only.
+}
+
+enum CafStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum ConnectionType {
+  NEW
+  RELOCATION
+  CHANGE_OF_PLAN
+  TRANSFER
+}
+
+enum CustomerType {
+  RESIDENTIAL
+  COMMERCIAL
+}
+
+enum IdProofType {
+  AADHAAR
+  PAN
+  VOTER_ID
+  PASSPORT
+  DRIVING_LICENSE
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum DocumentType {
+  PASSPORT_PHOTO
+  ID_PROOF
+  ADDRESS_PROOF
+  SIGNED_CAF
+  BANK_PROOF
+  BUSINESS_PROOF
+  OTHER
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy
+// ---------------------------------------------------------------------------
+
+model Company {
+  id           String    @id @default(cuid())
+  name         String
+  companyCode  String    @unique // e.g. INFOBB2548 — the identifier you hand out
+  contactEmail String?
+  contactPhone String?
+  address      String?
+  isActive     Boolean   @default(true)
+  // White-labeling
+  domain           String?   @unique // e.g. my.infolinkbroadband.com
+  logoUrl          String?
+  faviconUrl       String?
+  primaryColor     String?   // hex, e.g. #1e40af
+  secondaryColor   String?
+  accentColor      String?
+  loginSubtitle    String?
+  supportEmail     String?
+  supportPhone     String?
+  customCss        String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  franchises  Franchise[]
+  users       User[]
+  applications CustomerApplication[]
+  branding    CompanyBranding?
+
+  @@index([name])
+  @@index([domain])
+}
+
+model CompanyBranding {
+  id        String   @id @default(cuid())
+  companyId String   @unique
+  logoKey   String?  // storage key if stored in the pluggable storage
+  faviconKey String?
+  css       String?  @db.Text
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Franchise {
+  id        String   @id @default(cuid())
+  companyId String
+  code      String // unique within the company, e.g. INFOBB2548-F01
+  name      String
+  ownerName String?
+  email     String?
+  phone     String?
+  address   String?
+  city      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company      Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  users        User[]
+  applications CustomerApplication[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+// ---------------------------------------------------------------------------
+// Identity & access
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role
+  isActive     Boolean  @default(true)
+  // SUPER_ADMIN => both null; COMPANY_ADMIN => companyId set; FRANCHISE_USER => both set
+  companyId   String?
+  franchiseId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  franchise Franchise? @relation(fields: [franchiseId], references: [id], onDelete: Cascade)
+
+  createdApplications CustomerApplication[] @relation("ApplicationCreator")
+  reviewedApplications CustomerApplication[] @relation("ApplicationReviewer")
+
+  @@index([companyId])
+  @@index([franchiseId])
+}
+
+// ---------------------------------------------------------------------------
+// CAF (Customer Application Form)
+// ---------------------------------------------------------------------------
+
+model CustomerApplication {
+  id         String    @id @default(cuid())
+  cafNumber  String    @unique // e.g. INFOBB2548-CAF-000001
+  companyId  String
+  franchiseId String
+  status     CafStatus @default(SUBMITTED)
+
+  // --- Applicant details ---
+  customerName String
+  gender       Gender?
+  dob          DateTime?
+  fatherName   String?
+  mobile       String
+  email        String?
+  altPhone     String?
+
+  // --- Installation address ---
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  pincode      String
+
+  // --- Identity ---
+  idProofType IdProofType
+  idNumber    String
+
+  // --- Connection details ---
+  connectionType   ConnectionType
+  customerType     CustomerType  @default(RESIDENTIAL)
+  planName         String?
+  bandwidth        String?
+  connectionAddress String?
+  broadbandUsername String?
+  remarks           String?
+
+  // --- Billing / RADIUS fields (ready for later mapping) ---
+  billingAddressLine1 String?
+  billingAddressLine2 String?
+  billingCity         String?
+  billingState        String?
+  billingPincode      String?
+  serviceId           String?
+  radiusUsername      String?
+  radiusProfile       String?
+
+  // --- Workflow ---
+  submittedById   String?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  franchise Franchise @relation(fields: [franchiseId], references: [id], onDelete: Cascade)
+  submittedBy User?   @relation("ApplicationCreator", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedBy  User?   @relation("ApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  documents Document[]
+  radiusSyncs RadiusSync[]
+
+  @@index([companyId, franchiseId])
+  @@index([status])
+  @@index([mobile])
+  @@index([createdAt])
+}
+
+model Document {
+  id              String       @id @default(cuid())
+  applicationId   String
+  documentType    DocumentType
+  originalName    String
+  mimeType        String
+  sizeBytes       Int
+  // Provider that physically holds the file ("local" | "s3") — snapshot at upload
+  storageProvider String
+  // Provider-relative key, e.g. "INFOBB2548/2026/10/abc.png"
+  storageKey      String
+  uploadedAt      DateTime     @default(now())
+
+  application CustomerApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+// ---------------------------------------------------------------------------
+// System
+// ---------------------------------------------------------------------------
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// Atomic counters, e.g. CAF sequence per company: "caf-seq:<companyId>"
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}
+
+enum RadiusSyncStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+model RadiusSync {
+  id                    String           @id @default(cuid())
+  applicationId         String
+  status                RadiusSyncStatus @default(PENDING)
+  requestPayload        Json?
+  responsePayload       Json?
+  errorMessage          String?          @db.Text
+  attempts              Int              @default(0)
+  lastAttemptAt         DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  application CustomerApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([applicationId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String
+  action     String // e.g. "company.create", "caf.submit", "auth.login", "radius.sync.*"
+  entity     String?
+  entityId   String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
+}
