@@ -96,6 +96,8 @@ caf-portal/
 
 ## Extending
 
+See [Product notes and improvement plan](PRODUCT-NOTES.md) for known gaps, CAF form suggestions, Surepass verification plans, future mobile/email verification, the local-to-S3 storage roadmap, and approved CAF PDF/evidence export requirements.
+
 - **Aadhaar/KYC, payment gateways** — Add providers under `src/lib/integrations/` and wire them into the CAF review/provisioning flow.
 - **OIDC/LDAP** — Replace `src/lib/session.ts` / login route with your IdP.
 - **Reports/exports** — Add CSV/PDF exports scoped by tenant.
