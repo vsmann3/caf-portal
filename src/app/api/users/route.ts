@@ -4,6 +4,7 @@ import { requireRole, jsonError, scopeOf } from "@/lib/guard";
 import { createUserSchema } from "@/lib/validators";
 import { hashPassword } from "@/lib/password";
 import { audit } from "@/lib/audit";
+import { sendWelcomeEmail } from "@/lib/email";
 
 /** List users visible to the caller. Password hashes are never selected. */
 export async function GET() {
@@ -96,5 +97,7 @@ export async function POST(request: NextRequest) {
     companyId,
   });
 
-  return NextResponse.json({ user }, { status: 201 });
+  const email = await sendWelcomeEmail(user);
+  await audit(auth, "user.welcome-email", "User", user.id, { status: email.status });
+  return NextResponse.json({ user, email }, { status: 201 });
 }

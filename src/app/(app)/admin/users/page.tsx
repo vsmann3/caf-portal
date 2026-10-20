@@ -13,7 +13,7 @@ export default async function UsersPage() {
         title="Users"
         subtitle="Company admins and franchise users under your organization."
       />
-      <UsersClient />
+      <UsersClient isSuper={session.role === "SUPER_ADMIN"} />
     </div>
   );
 }

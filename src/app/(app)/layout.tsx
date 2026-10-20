@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { Sidebar } from "@/components/nav";
+import { getPortalSettings } from "@/lib/portal-settings";
 
 export default async function AppLayout({
   children,
@@ -10,6 +11,7 @@ export default async function AppLayout({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
+  const portal = await getPortalSettings();
 
   const [company, franchise] = await Promise.all([
     session.companyId
@@ -35,6 +37,7 @@ export default async function AppLayout({
     <div className="flex min-h-screen">
       <Sidebar
         role={session.role}
+        portalName={portal.name}
         userName={session.name}
         companyName={company?.name}
         franchiseName={franchise?.name}

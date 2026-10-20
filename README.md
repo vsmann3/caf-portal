@@ -68,6 +68,23 @@ npx prisma db seed
 npm run dev
 ```
 
+## Super Settings and Email
+
+Super Admins can open **Super Settings** to manage **General Portal Settings**, **Email Settings (SMTP)** and the existing **RADIUS Integration**. Each accordion has its own save action; saving one section does not save or discard edits in another. The old `/admin/radius` address redirects to the RADIUS section.
+
+1. Save the portal name, public portal URL and support email under General Portal Settings. The name appears on the login page/sidebar; welcome emails use the saved URL and support address. `APP_URL` is the fallback before a URL is saved.
+2. Enter your SMTP host/port, security mode, authentication credentials, sender and optional reply-to address. Use implicit TLS for the server's TLS port (usually 465), or STARTTLS for its submission port (usually 587). Unencrypted mode is available for a trusted relay.
+3. Save Email Settings, then use **Send Test Email** with your chosen recipient. The test uses saved settings and can be sent while automatic welcome emails are disabled. SMTP acceptance is not a guarantee of inbox delivery.
+4. Enable welcome emails and save Email Settings. Accounts created through the Users page/API receive a welcome message with their email, role and login link. The administrator shares the initial password separately; passwords are not emailed.
+
+SMTP passwords are encrypted in `SystemSetting`, never returned to the browser, and kept when the password input is left blank. Authentication can be disabled for a trusted relay; doing so removes the saved password. The saved secret depends on `AUTH_SECRET`; changing that secret requires re-entering SMTP credentials.
+
+If delivery fails, the account remains created and the Users page shows a warning. Fix SMTP settings and use **Send welcome email** on that user to retry. Company admins can resend only to active franchise users in their own company. Bootstrap/demo seeding does not send emails. Automatic background email retries are not included in this release.
+
+The known Storage Settings 404 remains deferred; this email/settings work does not change storage or migrate documents.
+
+For development validation, `bash scripts/test-super-settings.sh` builds and tests against a disposable PostgreSQL database and a local SMTP capture server. It does not use production `.env` settings or deliver messages externally. Set `CAF_TEST_IMAGE=<image>` to test an already-built image.
+
 ## Storage Configuration
 
 1. Log in as **Super Admin**

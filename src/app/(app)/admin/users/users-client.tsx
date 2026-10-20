@@ -17,14 +17,20 @@ interface FranchiseRow {
   id: string;
   name: string;
   code: string;
+  companyId: string;
 }
 
-export function UsersClient() {
+export function UsersClient({ isSuper }: { isSuper: boolean }) {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [franchises, setFranchises] = useState<FranchiseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [noticeKind, setNoticeKind] = useState<"success" | "warning">("success");
+  const [resending, setResending] = useState("");
+  const [companies, setCompanies] = useState<{ id: string; name: string; isActive: boolean }[]>([]);
+  const [companyId, setCompanyId] = useState("");
 
   // create-form state
   const [name, setName] = useState("");
@@ -36,14 +42,21 @@ export function UsersClient() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [usersRes, franchisesRes] = await Promise.all([
+      const [usersRes, franchisesRes, companiesRes] = await Promise.all([
         fetch("/api/users"),
         fetch("/api/franchises"),
+        fetch("/api/companies"),
       ]);
       const usersJson = await usersRes.json().catch(() => ({ users: [] }));
       const franchisesJson = await franchisesRes.json().catch(() => ({ franchises: [] }));
       if (usersRes.ok) setUsers(usersJson.users ?? []);
       if (franchisesRes.ok) setFranchises(franchisesJson.franchises ?? []);
+      if (companiesRes.ok) {
+        const json = await companiesRes.json();
+        const items = (json.companies ?? []).filter((company: { isActive: boolean }) => company.isActive);
+        setCompanies(items);
+        setCompanyId(previous => previous || items[0]?.id || "");
+      }
     } finally {
       setLoading(false);
     }
@@ -57,6 +70,7 @@ export function UsersClient() {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setNotice("");
     try {
       const res = await fetch("/api/users", {
         method: "POST",
@@ -66,6 +80,7 @@ export function UsersClient() {
           email,
           password,
           role,
+          companyId,
           franchiseId: role === "FRANCHISE_USER" ? franchiseId : undefined,
         }),
       });
@@ -78,10 +93,26 @@ export function UsersClient() {
       setEmail("");
       setPassword("");
       setFranchiseId("");
+      setNotice(`Account created. ${json.email?.message ?? ""}`);
+      setNoticeKind(json.email?.status === "failed" ? "warning" : "success");
       await load();
+    } catch {
+      setError("Could not confirm account creation. Refresh the list before retrying.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function resendWelcome(user: UserRow) {
+    setResending(user.id); setError(null); setNotice("");
+    try {
+      const response = await fetch(`/api/users/${user.id}/welcome-email`, { method: "POST" });
+      const json = await response.json();
+      if (!response.ok) { setError(json.error || json.email?.message || "Unable to send welcome email"); return; }
+      setNotice(json.email.message);
+      setNoticeKind("success");
+    } catch { setError("Unable to send welcome email. Please try again."); }
+    finally { setResending(""); }
   }
 
   async function toggleActive(user: UserRow) {
@@ -97,6 +128,8 @@ export function UsersClient() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
+      {notice && <p role="status" className={`rounded-lg p-3 text-sm lg:col-span-3 ${noticeKind === "warning" ? "bg-amber-50 text-amber-800" : "bg-green-50 text-green-700"}`}>{notice}</p>}
+      {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 lg:col-span-3">{error}</p>}
       <div className="lg:col-span-2">
         {loading ? (
           <p className="text-sm text-slate-500">Loading users…</p>
@@ -138,6 +171,7 @@ export function UsersClient() {
                           {u.isActive ? "Deactivate" : "Reactivate"}
                         </button>
                       )}
+                      {u.isActive && (isSuper || u.role === "FRANCHISE_USER") && <button type="button" disabled={Boolean(resending)} onClick={() => resendWelcome(u)} className="ml-3 text-blue-600 hover:underline disabled:opacity-50">{resending === u.id ? "Sending…" : "Send welcome email"}</button>}
                     </td>
                   </tr>
                 ))}
@@ -149,6 +183,10 @@ export function UsersClient() {
 
       <form onSubmit={createUser} className="card h-fit space-y-4 p-5">
         <h3 className="text-base font-semibold text-slate-900">Add User</h3>
+        <div><label className="field-label" htmlFor="u-company">Company *</label>
+          <select id="u-company" className="field-input" required value={companyId} disabled={!isSuper} onChange={e => { setCompanyId(e.target.value); setFranchiseId(""); }}>
+            <option value="">Select company…</option>{companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}
+          </select></div>
         <div>
           <label className="field-label" htmlFor="u-name">Name *</label>
           <input id="u-name" className="field-input" required minLength={2} value={name} onChange={(e) => setName(e.target.value)} />
@@ -165,7 +203,7 @@ export function UsersClient() {
           <label className="field-label" htmlFor="u-role">Role *</label>
           <select id="u-role" className="field-input" value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
             <option value="FRANCHISE_USER">Franchise User</option>
-            <option value="COMPANY_ADMIN">Company Admin</option>
+            {isSuper && <option value="COMPANY_ADMIN">Company Admin</option>}
           </select>
         </div>
         {role === "FRANCHISE_USER" && (
@@ -179,15 +217,11 @@ export function UsersClient() {
               onChange={(e) => setFranchiseId(e.target.value)}
             >
               <option value="">Select franchise…</option>
-              {franchises.map((f) => (
+              {franchises.filter(f => f.companyId === companyId).map((f) => (
                 <option key={f.id} value={f.id}>{f.name} ({f.code})</option>
               ))}
             </select>
           </div>
-        )}
-
-        {error && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         )}
 
         <button type="submit" disabled={busy} className="btn-primary w-full">

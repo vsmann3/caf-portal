@@ -1,5 +1,16 @@
 # Change log
 
+## 2026-10-20: Super Settings and SMTP welcome emails
+
+- Add a Super Admin-only Super Settings page with independently saved General Portal Settings, Email Settings (SMTP), and the existing RADIUS section. Preserve the legacy RADIUS link with a redirect. Leave the reported Storage Settings 404 deferred as requested.
+- Store SMTP configuration under its own system setting, encrypt its password, return only a saved-password indicator, preserve blank password updates, and support TLS, required STARTTLS or an explicitly selected trusted relay.
+- Add saved-configuration test emails. Automatically send welcome emails for accounts created through the Users API, with a portal login link and no plaintext account password. Keep account creation successful if SMTP fails, display delivery status, and allow an authorised manual resend with company/role scoping.
+- Add independently saved portal name, public URL and support email. Use the name on the login/sidebar and the configured URL/support address in emails.
+- Fix the user form's missing company ID; scope franchise choices to the selected company and company-admin role choices to franchise users.
+- Add isolated SMTP capture and integration tests. No new database schema migration or production SMTP configuration is required until an operator enables email.
+
+Validation: production Docker build and TypeScript checks passed. The final image passed isolated SMTP-capture tests covering independent section saves, encryption/redaction and password preservation, test delivery, required STARTTLS failure, welcome messages without account passwords, company/franchise permissions, cross-tenant resend denial, duplicate creation, failed-delivery account preservation, recovery by resend, disabled delivery and server-rendered forms without secrets. The existing offline Prisma, migration failure, schema/seed, authenticated login/dashboard and HTTP smoke checks also passed against that image; all six local startup tests passed. Interactive browser review was unavailable because no browser was connected. No live settings, accounts or email recipients have been modified by this feature work.
+
 ## 2026-10-20: initialise schema and seed accounts
 
 - Diagnose login failure as Prisma `P2021`: the inspected deployment had only `_prisma_migrations`, with no application tables. Seed credentials in the environment do not create a user unless initial seeding succeeds.

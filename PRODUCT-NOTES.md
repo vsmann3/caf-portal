@@ -30,7 +30,7 @@ These requirements do not imply that a generated PDF, a provider response, or th
 | Priority | Finding from the review | Impact / next action |
 | --- | --- | --- |
 | High | At initial review, no checked-in `prisma/migrations` files existed. | The login repair adds an initial migration for fresh databases. Existing databases whose application tables were created outside Prisma Migrate still need a reviewed baseline; never reset or reinitialise production to create one. |
-| High | Storage settings pages and API exist locally but were untracked at review time. | Review, test and commit them before treating the settings UI as a deployed feature. |
+| High | Storage settings pages and API exist locally but were untracked at review time. The owner subsequently confirmed that the deployed page returns 404. | The owner explicitly deferred this fix while prioritising Super Settings and SMTP. Review, test and commit the storage pages/API in a later task; do not switch providers or migrate documents as part of email work. |
 | High | RADIUS adapter is a no-op returning success with `SKIPPED`. | A successful-looking sync does not prove subscriber creation. Represent disabled/unimplemented integration honestly; implement real adapters, idempotency, durable retries and visible errors. |
 | High | Documents store a provider name/key, but reads resolve the current provider configuration. | A changed local path, S3 bucket or endpoint can break older documents. Persist a reference to an immutable/versioned storage location. |
 | High | Upload checks use the supplied MIME type and per-file size. | Add content-based file validation, total request limits, malware scanning and server-side required-document checks. The UI currently asks for at least one attachment, but the API does not enforce that minimum. |
@@ -141,6 +141,7 @@ An original XML document cannot retain its machine-readable evidence properties 
 - Health/readiness endpoints, migration failure alerts, disk/storage alerts and deployment rollback procedures.
 - Automated tests for company/franchise isolation, document permissions, full CAF submission/review, exports and provider failures.
 - Administrator MFA, password recovery, session management and stronger shared rate limiting when needed.
+- Primary portal settings belong under Super Admin **Super Settings**, with separate accordions and a save button for each section. SMTP configuration, test delivery and new-account welcome emails are the first email requirements. Saving email settings must not overwrite other sections or their unsaved form inputs.
 - Pending-review ageing, reviewer assignment, notifications, reminders and operational dashboards.
 - Permission-scoped CSV exports and controlled bulk imports.
 - A real RADIUS queue/worker with retries, idempotency and reconciliation after approval.

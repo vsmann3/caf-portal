@@ -20,7 +20,7 @@ const NAV: NavItem[] = [
   { href: "/admin/companies", label: "Companies", roles: ["SUPER_ADMIN"] },
   { href: "/admin/branding", label: "Branding", roles: ["SUPER_ADMIN"] },
   { href: "/admin/storage", label: "Storage Settings", roles: ["SUPER_ADMIN"] },
-  { href: "/admin/radius", label: "RADIUS Sync", roles: ["SUPER_ADMIN"] },
+  { href: "/admin/super-settings", label: "Super Settings", roles: ["SUPER_ADMIN"] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -34,11 +34,13 @@ export function Sidebar({
   userName,
   companyName,
   franchiseName,
+  portalName = "CAF Portal",
 }: {
   role: Role;
   userName: string;
   companyName?: string | null;
   franchiseName?: string | null;
+  portalName?: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -56,7 +58,7 @@ export function Sidebar({
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
       <div className="border-b border-slate-200 px-5 py-5">
-        <p className="text-lg font-bold text-blue-700">CAF Portal</p>
+        <p className="text-lg font-bold text-blue-700">{portalName}</p>
         {companyName && (
           <p className="mt-1 truncate text-sm font-medium text-slate-700">{companyName}</p>
         )}
