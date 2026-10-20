@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/caf", "/customers", "/admin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/caf", "/customers", "/admin", "/profile"];
 
 /**
  * Edge middleware: cheap signature check for page protection.

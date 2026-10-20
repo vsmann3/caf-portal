@@ -36,3 +36,10 @@ test "$(sql -Atc 'SELECT COUNT(*) FROM "CustomerApplication"')" = 2
 test "$(sql -Atc 'SELECT "storageKey" FROM "Document" WHERE id = '\''d'\'' AND "sizeBytes" = 5242880')" = unchanged-legacy-key
 test "$(sql -Atc 'SELECT "broadbandUsername" FROM "CustomerApplication" WHERE id = '\''a1'\''')" = ' Duplicate '
 echo 'PASS: legacy duplicate preflight/transaction rollback, additive upgrade, unchanged historical username and 5 MB document reference.'
+sql <<'SQL' >/dev/null
+INSERT INTO "User" (id,email,name,"passwordHash",role,"companyId","updatedAt")
+VALUES ('legacy-staff','legacy-staff@example.test','Legacy staff','preserve-legacy-password-hash','COMPANY_ADMIN','c',NOW());
+SQL
+sql < prisma/migrations/20261021200000_staff_profiles/migration.sql >/dev/null
+test "$(sql -Atc 'SELECT COUNT(*) FROM "User" WHERE id = '\''legacy-staff'\'' AND email = '\''legacy-staff@example.test'\'' AND "passwordHash" = '\''preserve-legacy-password-hash'\'' AND "sessionVersion" = 0 AND "emailVerifiedAt" IS NULL')" = 1
+echo 'PASS: staff profile migration preserves existing staff email/password hash, defaults session version to zero and leaves email unverified.'

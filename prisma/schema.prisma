@@ -142,6 +142,8 @@ model User {
   email        String   @unique
   name         String
   passwordHash String
+  emailVerifiedAt DateTime?
+  sessionVersion Int @default(0)
   role         Role
   isActive     Boolean  @default(true)
   // SUPER_ADMIN => both null; COMPANY_ADMIN => companyId set; FRANCHISE_USER => both set
@@ -155,9 +157,31 @@ model User {
 
   createdApplications CustomerApplication[] @relation("ApplicationCreator")
   reviewedApplications CustomerApplication[] @relation("ApplicationReviewer")
+  emailChallenge StaffEmailChallenge?
+  securityLimit StaffSecurityLimit?
 
   @@index([companyId])
   @@index([franchiseId])
+}
+
+model StaffEmailChallenge {
+  id String @id
+  userId String @unique
+  newEmail String
+  tokenHash String
+  sessionVersion Int
+  attempts Int @default(0)
+  sentAt DateTime @default(now())
+  expiresAt DateTime
+  delivered Boolean @default(false)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StaffSecurityLimit {
+  userId String @id
+  count Int
+  resetAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ---------------------------------------------------------------------------

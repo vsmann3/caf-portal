@@ -257,3 +257,18 @@ RADIUS synchronisation.
 The rollout uses an additive migration and checks legacy company-level username
 conflicts without renaming accounts. Deployment/preflight instructions are in
 `README.md`; exact changes and validation are recorded in `CHANGELOG.md`.
+
+## Staff profile requirement — 2026-10-21
+
+All staff roles must be able to manage their own email/password under Profile
+Settings, including company and franchise owners using their existing staff
+roles. This is separate from customer contact verification, which remains on
+the customer roadmap. No customer account or new owner privilege is introduced.
+
+Implemented: current-password confirmation, SMTP codes for current-email
+verification/reverification or a new mailbox, pending-email handling, password
+changes and credential-change session revocation. Email verification does not
+claim identity/document verification. Existing staff may continue logging in
+without a forced verification rollout. Recovery without the current password,
+administrator MFA, customer verification and security notifications to the old
+mailbox remain possible future additions, not completed features.

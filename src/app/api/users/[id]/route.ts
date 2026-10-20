@@ -62,6 +62,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       name: d.name ?? undefined,
       email: d.email ?? undefined,
       passwordHash: d.password ? hashPassword(d.password) : undefined,
+      ...(d.email && d.email !== existing.email ? { emailVerifiedAt: null } : {}),
+      ...(d.password || (d.email && d.email !== existing.email) ? { sessionVersion: { increment: 1 } } : {}),
       isActive: d.isActive ?? undefined,
       franchiseId:
         existing.role === "FRANCHISE_USER"

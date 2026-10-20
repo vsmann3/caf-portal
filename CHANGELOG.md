@@ -1,5 +1,17 @@
 # Change log
 
+## 2026-10-21: staff Profile Settings
+
+- Add Profile Settings for every existing staff role (Super Admin, Company Admin and Franchise User), including owners using those roles. Keep customer onboarding/contact verification separate.
+- Allow current-email verification/reverification and new-email verification using the portal's enabled SMTP service. Keep the existing login email until confirmation; show delivery errors without changing it.
+- Clarify the SMTP enable checkbox as portal email delivery for both welcome and staff verification messages; saved-configuration test messages remain available while delivery is disabled.
+- Protect codes with HMAC storage, 10-minute expiry, five attempts, single-use consumption and a 60-second resend cooldown. Add database-backed profile request limits and current-password checks before sending or changing a password. Keep secrets out of API responses and profile audit entries.
+- Require the current password and a confirmed new password of at least 12 characters. Revoke existing sessions after password or confirmed email changes; preserve versionless existing sessions until credentials change.
+- Clear email verification after administrative email edits and revoke sessions after administrative credential edits. Restrict self-service actions to the authenticated account without accepting role/tenant/user-ID edits.
+- Add an additive migration for staff verification, session versions and short-lived verification/rate-limit state. Existing staff emails/passwords are preserved and verification is not forced at login.
+
+Validation: production Docker build and TypeScript checks passed. The six local startup tests and isolated migration/HTTP startup smoke passed with locked Prisma 6.19.3 and all three migrations applied before Next.js. The upgrade test preserved an existing staff email/password hash and defaulted its session version to zero. Integration tests passed for all staff roles, current-password authentication, current/new email verification, pending email preservation, duplicate email, expiry, cooldown, attempt/rate limits, single-use/concurrent confirmation, SMTP failure/disabled handling, secret redaction, legacy tokens and self-service/admin session revocation. Existing CAF and SMTP suites passed. Chrome passed real SMTP verification/reverification, email change and login, password confirmation/change/relogin, and desktop/mobile layout; screenshots were inspected. A browser-discovered refresh timing issue was fixed so successful saves finish refreshing before edits are re-enabled. Production data, documents, SMTP settings and `.env` were not changed.
+
 ## 2026-10-21: eCAF form and submission workflow
 
 - Replace the entry form with responsive, collapsible sections, conditional residential/business fields, document previews, validation summary and a separate review step. Make navigation collapsible on phones so the form has usable width.

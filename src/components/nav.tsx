@@ -12,6 +12,7 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
+  { href: "/profile", label: "Profile Settings", roles: ["SUPER_ADMIN", "COMPANY_ADMIN", "FRANCHISE_USER"] },
   { href: "/dashboard", label: "Dashboard", roles: ["SUPER_ADMIN", "COMPANY_ADMIN", "FRANCHISE_USER"] },
   { href: "/caf/new", label: "New CAF", roles: ["SUPER_ADMIN", "COMPANY_ADMIN", "FRANCHISE_USER"] },
   { href: "/customers", label: "Customers", roles: ["SUPER_ADMIN", "COMPANY_ADMIN", "FRANCHISE_USER"] },

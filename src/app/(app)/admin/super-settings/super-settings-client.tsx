@@ -82,7 +82,7 @@ function EmailSettings({ initial }: { initial: Smtp }) {
       <Feedback error={error} notice={notice} />
       {!smtp ? <p className="text-sm text-slate-500">{error ? "Settings unavailable." : "Loading settings…"}</p> : <>
         <form onSubmit={save} className="space-y-4">
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={smtp.enabled} onChange={e => setSmtp({ ...smtp, enabled: e.target.checked })} />Send welcome emails to newly created accounts</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={smtp.enabled} onChange={e => setSmtp({ ...smtp, enabled: e.target.checked })} />Enable portal emails (account welcome and staff verification)</label>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className="field-label" htmlFor="smtp-host">SMTP host</label><input id="smtp-host" className="field-input" required={smtp.enabled} value={smtp.host} onChange={e => setSmtp({ ...smtp, host: e.target.value })} placeholder="smtp.example.com" /></div>
             <div><label className="field-label" htmlFor="smtp-port">Port</label><input id="smtp-port" className="field-input" type="number" required min={1} max={65535} value={smtp.port} onChange={e => setSmtp({ ...smtp, port: Number(e.target.value) })} /></div>
@@ -103,7 +103,7 @@ function EmailSettings({ initial }: { initial: Smtp }) {
           <button className="btn-primary" disabled={busy || testing}>{busy ? "Saving…" : "Save Email Settings"}</button>
         </form>
         <form onSubmit={test} className="space-y-3 border-t border-slate-200 pt-4">
-          <p className="text-sm text-slate-600">Send a test using the saved email settings, including while welcome emails are disabled. Save your changes first.</p>
+          <p className="text-sm text-slate-600">Send a test using the saved email settings, including while portal emails are disabled. Save your changes first.</p>
           <label className="field-label" htmlFor="smtp-test">Test recipient</label>
           <input id="smtp-test" className="field-input" type="email" required value={recipient} onChange={e => setRecipient(e.target.value)} />
           <button className="btn-secondary" disabled={busy || testing}>{testing ? "Sending…" : "Send Test Email"}</button>

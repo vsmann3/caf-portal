@@ -14,6 +14,7 @@ export interface SessionPayload {
   role: Role;
   companyId: string | null;
   franchiseId: string | null;
+  sessionVersion?: number;
 }
 
 function getSecret(): Uint8Array {
@@ -76,9 +77,10 @@ export async function getSession(): Promise<SessionPayload | null> {
       isActive: true,
       companyId: true,
       franchiseId: true,
+      sessionVersion: true,
     },
   });
-  if (!user || !user.isActive) return null;
+  if (!user || !user.isActive || (payload.sessionVersion ?? 0) !== user.sessionVersion) return null;
   return {
     userId: user.id,
     email: user.email,
@@ -86,5 +88,6 @@ export async function getSession(): Promise<SessionPayload | null> {
     role: user.role,
     companyId: user.companyId,
     franchiseId: user.franchiseId,
+    sessionVersion: user.sessionVersion,
   };
 }

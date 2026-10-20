@@ -74,6 +74,17 @@ export async function sendTestEmail(to: string) {
   await send(settings, to, `${portal.name}: SMTP test`, `This is a test email from ${portal.name}.\n\nYour saved SMTP settings accepted this message for delivery.`);
 }
 
+export async function sendStaffVerificationEmail(to: string, code: string) {
+  const [settings, portal] = await Promise.all([getSmtpSettings(), getPortalSettings()]);
+  if (!settings.enabled) throw new Error("Email delivery is disabled");
+  await send(settings, to, `${portal.name}: verify your staff email`, [
+    `Your ${portal.name} staff email verification code is: ${code}`,
+    "", "This code expires in 10 minutes and can be used only once.",
+    "Enter it in Profile Settings while signed in. Your login email stays unchanged until verification succeeds.",
+    "If you did not request this code, ignore this message. Do not share the code or your password.",
+  ].join("\n"));
+}
+
 export type WelcomeEmailResult = { status: "sent" | "disabled" | "failed"; message: string };
 
 export async function sendWelcomeEmail(user: { name: string; email: string; role: string; company?: { name: string } | null }): Promise<WelcomeEmailResult> {

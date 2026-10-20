@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
   }
 
   await setSessionCookie({
+    sessionVersion: user.sessionVersion,
     userId: user.id,
     email: user.email,
     name: user.name,

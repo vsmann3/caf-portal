@@ -206,3 +206,43 @@ submissions, scoping, usernames, business requirements, upload limits, drafts an
 review/correction. `test-caf-browser.cjs` accepts a temporary Playwright module
 path, an SSH-forwarded isolated URL and an artifact directory, and uses installed
 Chrome for desktop/mobile form checks. Its fixture credentials are test-only.
+
+## Staff Profile Settings
+
+Every staff account (Super Admin, Company Admin/owner and Franchise User/owner)
+can open **Profile Settings** from navigation. This is staff account management;
+it does not add customer login or customer email verification.
+
+- **Verify/reverify email:** enter the current email and current password, request
+  a code, then confirm the six-digit code sent through the portal's SMTP service.
+- **Change email:** enter a new email and current password. The existing login
+  email remains active until the new mailbox's code is confirmed. Confirmation
+  verifies the new email and signs out existing sessions; sign in with the new
+  email and existing password afterward. A duplicate email cannot be claimed.
+- **Change password:** enter the current password and confirm a new password of
+  at least 12 characters (maximum 128). Password changes sign out existing
+  sessions, including the current session. Passwords are never emailed.
+
+SMTP must be configured and enabled in **Super Settings** to verify email.
+Disabled or failed delivery leaves the login email unchanged; password changes
+remain available without SMTP. Codes expire after 10 minutes, allow five attempts,
+are single-use and have a 60-second resend cooldown. Sensitive profile requests
+are limited to 10 per account per 10 minutes using database-backed counters.
+Only an HMAC of the code is stored; codes/passwords are not returned by the
+profile API or placed in profile audit entries.
+
+The additive `20261021200000_staff_profiles` migration leaves existing staff email
+addresses and password hashes unchanged. Existing accounts initially show
+"Email not yet verified" and are not forced out of the portal. Versionless
+sessions from earlier releases remain valid until a credential change revokes
+them. Admin changes to a staff email clear its verification timestamp, and admin
+email/password changes also revoke existing sessions. Roles/company/franchise
+assignments cannot be edited through self-service Profile Settings.
+
+Deploy with the usual `git pull --ff-only origin main` and
+`docker compose up -d --build --no-deps app`; startup applies the migration. Keep
+`RUN_SEED=0`. No environment replacement, database reset or document migration is
+required. The integration harness also runs `scripts/test-profile.cjs` with
+disposable PostgreSQL/SMTP fixtures. `test-profile-browser.cjs` takes a temporary
+Playwright module path, isolated app and SMTP-capture localhost URLs, and a
+screenshot directory to exercise real verification and password flows in Chrome.
