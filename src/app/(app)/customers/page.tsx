@@ -29,6 +29,7 @@ export default async function CustomersPage({
     where.franchiseId = scope.franchiseId;
   }
   if (status) where.status = status;
+  if (scope.kind !== "franchise" && typeof sp.franchiseId === "string" && sp.franchiseId) where.franchiseId = sp.franchiseId;
   if (q) {
     where.OR = [
       { customerName: { contains: q, mode: "insensitive" } },

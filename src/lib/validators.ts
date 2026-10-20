@@ -102,6 +102,23 @@ export const createApplicationSchema = z.object({
   connectionAddress: z.string().trim().max(500).or(z.literal("")).optional(),
   broadbandUsername: z.string().trim().max(100).or(z.literal("")).optional(),
   remarks: z.string().trim().max(1000).or(z.literal("")).optional(),
+  businessName: z.string().trim().max(150).optional(),
+  gstNumber: z.string().trim().toUpperCase().regex(/^$|^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/, "Enter a valid 15-character GST number").optional(),
+  billingAddressLine1: z.string().trim().min(3, "Billing address required").max(300),
+  billingAddressLine2: z.string().trim().max(300).optional(),
+  billingCity: z.string().trim().min(2, "Billing city required").max(100),
+  billingState: z.string().trim().min(2, "Billing state required").max(100),
+  billingPincode: z.string().regex(/^[1-9]\d{5}$/, "Billing PIN must have 6 digits"),
+  declarationAccepted: z.literal(true, { errorMap: () => ({ message: "Confirm the submission declaration" }) }),
+  draftId: z.string().optional(),
+  draftVersion: z.number().int().positive().optional(),
+  applicationId: z.string().optional(),
+  revision: z.number().int().positive().optional(),
+}).superRefine((data, ctx) => {
+  if (data.customerType === "COMMERCIAL") {
+    if (!data.businessName) ctx.addIssue({ code: "custom", path: ["businessName"], message: "Business name required" });
+    if (!data.gstNumber) ctx.addIssue({ code: "custom", path: ["gstNumber"], message: "GST number required for business CAFs" });
+  }
 });
 
 export const reviewApplicationSchema = z.object({

@@ -62,6 +62,7 @@ enum DocumentType {
   SIGNED_CAF
   BANK_PROOF
   BUSINESS_PROOF
+  GST_CERTIFICATE
   OTHER
 }
 
@@ -178,6 +179,11 @@ model CustomerApplication {
   mobile       String
   email        String?
   altPhone     String?
+  businessName String?
+  gstNumber    String?
+  declarationAcceptedAt DateTime?
+  revision Int @default(1)
+  approvedSnapshot Json?
 
   // --- Installation address ---
   addressLine1 String
@@ -230,6 +236,20 @@ model CustomerApplication {
   @@index([status])
   @@index([mobile])
   @@index([createdAt])
+  @@unique([companyId, broadbandUsername])
+}
+
+// Partial CAF fields live separately so drafts need no fake customer/ID values.
+model CafDraft {
+  id String @id @default(cuid())
+  ownerId String
+  companyId String
+  franchiseId String
+  payload Json
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([ownerId])
 }
 
 model Document {

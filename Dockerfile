@@ -36,14 +36,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
+# Keep the unchanged production tree cached across application rebuilds.
 COPY --from=production-deps /app/node_modules ./node_modules
+COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/seed-runtime ./seed-runtime
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x docker-entrypoint.sh && mkdir -p /app/storage && chown -R appuser:appgroup /app/storage
+RUN chmod +x docker-entrypoint.sh && mkdir -p /app/storage /app/.next/cache && chown -R appuser:appgroup /app/storage /app/.next/cache
 
 USER appuser
 EXPOSE 3000

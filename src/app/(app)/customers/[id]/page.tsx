@@ -61,6 +61,7 @@ export default async function CustomerDetailPage({
         action={
           <div className="flex items-center gap-3">
             <StatusBadge status={app.status} />
+            {app.status === "REJECTED" && <Link href={`/customers/${app.id}/edit`} className="btn-primary">Correct and resubmit</Link>}
             <Link href="/customers" className="btn-secondary">← Back</Link>
           </div>
         }
@@ -104,6 +105,19 @@ export default async function CustomerDetailPage({
           </dl>
         </Section>
 
+        <Section title="Billing Address">
+          <dl className="grid grid-cols-2 gap-4">
+            <div className="col-span-2"><Field label="Address" value={[app.billingAddressLine1, app.billingAddressLine2].filter(Boolean).join(", ")} /></div>
+            <Field label="City" value={app.billingCity} />
+            <Field label="State" value={app.billingState} />
+            <Field label="PIN Code" value={app.billingPincode} />
+          </dl>
+        </Section>
+        {app.customerType === "COMMERCIAL" && <Section title="Business details">
+          <dl className="grid grid-cols-2 gap-4"><Field label="Registered name" value={app.businessName} /><Field label="GST number" value={app.gstNumber} /></dl>
+          <p className="mt-3 text-sm text-slate-500">GST verification via Surepass is planned.</p>
+        </Section>}
+
         <Section title="Connection Details">
           <dl className="grid grid-cols-2 gap-4">
             <Field label="Connection Type" value={app.connectionType.replaceAll("_", " ")} />
@@ -112,7 +126,7 @@ export default async function CustomerDetailPage({
             <Field label="Bandwidth" value={app.bandwidth} />
             <Field label="Broadband Username" value={app.broadbandUsername} />
             <div className="col-span-2">
-              <Field label="Installation Address" value={app.connectionAddress} />
+              <Field label="Legacy additional address" value={app.connectionAddress} />
             </div>
             <div className="col-span-2">
               <Field label="Remarks" value={app.remarks} />
@@ -167,6 +181,8 @@ export default async function CustomerDetailPage({
         )}
         <Section title="Audit Trail">
           <dl className="grid grid-cols-2 gap-4">
+            <Field label="CAF Revision" value={app.revision} />
+            <Field label="Staff acknowledgement" value={app.declarationAcceptedAt?.toLocaleString("en-IN")} />
             <Field label="Submitted By" value={app.submittedBy?.name} />
             <Field
               label="Submitted At"

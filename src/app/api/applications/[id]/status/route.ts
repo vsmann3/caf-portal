@@ -31,11 +31,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       // Company admins may only review applications of their own company.
       ...(auth.role === "COMPANY_ADMIN" && auth.companyId ? { companyId: auth.companyId } : {}),
     },
-    include: { company: true, franchise: true },
+    include: { company: true, franchise: true, documents: { orderBy: { uploadedAt: "asc" } } },
   });
   if (!existing) return jsonError(404, "Application not found");
-  if (existing.status === "APPROVED" || existing.status === "REJECTED") {
-    return jsonError(400, `Application is already ${existing.status.toLowerCase()}`);
+  if (existing.status !== "SUBMITTED" && existing.status !== "UNDER_REVIEW") {
+    return jsonError(409, "Only submitted applications can be reviewed");
   }
   if (action === "REJECT" && !rejectionReason) {
     return jsonError(400, "A rejection reason is required");
@@ -44,15 +44,21 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const status =
     action === "APPROVE" ? "APPROVED" : action === "REJECT" ? "REJECTED" : "UNDER_REVIEW";
 
-  const application = await prisma.customerApplication.update({
-    where: { id },
+  const changed = await prisma.customerApplication.updateMany({
+    where: { id, status: existing.status, revision: existing.revision },
     data: {
       status,
       reviewedById: auth.userId,
       reviewedAt: new Date(),
       rejectionReason: action === "REJECT" ? rejectionReason : null,
+      ...(action === "APPROVE" ? { approvedSnapshot: JSON.parse(JSON.stringify({
+        ...existing, status: "APPROVED", reviewedById: auth.userId,
+        approvedBy: { id: auth.userId, name: auth.name }, approvedAt: new Date().toISOString(),
+      })) } : {}),
     },
   });
+  if (!changed.count) return jsonError(409, "Application changed during review. Reload and review again.");
+  const application = await prisma.customerApplication.findUniqueOrThrow({ where: { id } });
 
   await audit(auth, `caf.${status.toLowerCase()}`, "CustomerApplication", id, {
     cafNumber: existing.cafNumber,

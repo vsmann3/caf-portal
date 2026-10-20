@@ -168,3 +168,92 @@ This order is a recommendation. Business urgency may move Surepass earlier; its 
 - Required customer declaration/consent wording, identity masking, retention and access/sharing policies, to be confirmed with the responsible owner/adviser.
 - Mobile/email provider choices, expected traffic and handling of verification outages.
 - S3 service choice and the migration/rollback acceptance criteria. Local storage remains the current choice until a migration is approved.
+
+## CAF reference review — 2026-10-21
+
+Reviewed local reference images `references/caf-form-1.png` through `caf-form-4.png` against the existing CAF form. These screenshots are inspiration, not an approved field specification.
+
+**Owner direction:** eCAF collection, verification, review and export are the core product. This is not intended to become a RADIUS administration portal. Selected fields may later be sent to an external RADIUS server through its API. Discuss the design with the owner before implementing it. Retain deferred ideas for future updates rather than treating them as permanently rejected.
+
+### Proposed design, awaiting owner review
+
+- Use responsive sections for application context, customer/contact details, identity verification, addresses, service details, documents, and declaration/review. Prefer two columns on desktop and one on mobile; avoid the reference's horizontal scrolling and dense four-column layout. Allow sections to collapse while keeping completion/errors visible.
+- Provide explicit Save Draft, resume, review summary and Submit for Approval actions. A draft save is not approval; freeze the approved revision used for exports.
+- Keep customer full name, parent/spouse details, date of birth, contact details, customer type and scoped company/franchise context. Generate the CAF number; provide a separate optional legacy/external reference.
+- Clarify address semantics: identity/permanent address, installation address and billing address only where needed, with clearly directed copy options. The current form labels both its main address and an additional address as installation address, which is ambiguous.
+- Make document categories and required evidence explicit, including front/back where applicable, photo, identity/address proof and declaration evidence. Provide previews, replacement and validation. Agree business-customer documents and signing/declaration method before implementation.
+- Prepare separate verification states for Surepass identity checks, mobile and email. An uploaded file, a successful API call, a welcome email and an approved CAF do not by themselves mean the customer is verified. Do not display a working Aadhaar OTP action until the provider flow exists.
+- Keep a small optional service section: plan/bandwidth, service/account username or external subscriber ID, and connection type. Decide which values must be captured now and which will come from the external system. Never include service passwords in CAF PDFs or evidence exports.
+- Approved PDF should use a dedicated print layout rather than a screenshot of the entry screen. Preserve original attachments/provider artifacts separately; retain the existing approved snapshot and evidence-export plan above.
+
+### Retained backlog, not part of the proposed first CAF redesign
+
+| Reference feature / idea | Proposed disposition | Revisit when |
+| --- | --- | --- |
+| RADIUS API field mapping, provisioning, retries and sync status | Future integration; CAF completion must remain usable without it. Distinguish approval from provisioning. | External API contract and desired sync trigger are agreed. |
+| IP mode/static IP, MAC, node/POP, switch/port, protocol, circuit ID, cable length | Defer network inventory/operations fields; retain only an agreed CAF-relevant subset if needed. | A specific downstream API or operational requirement needs them. |
+| Billing modes, package/subpackage catalogues, installation charges and deposits | Defer full billing management; an agreed plan/charge snapshot may be useful on the CAF. | Owner confirms commercial information required on the form. |
+| Payments, discounts, additional charges, purchase orders and expiry | Retain for future integrations; do not build accounting workflows as part of CAF entry. | Finance-system responsibilities and business CAF requirements are defined. |
+| Branch, building/area catalogues and GPS coordinates | Optional later; avoid adding mandatory fields without a demonstrated need. | Franchise workflow or installation evidence requires them. |
+| Aadhaar OTP, mobile OTP and email verification | Retained planned capabilities, separate from the initial layout work. | Provider access, flows and exception policies are agreed. |
+
+### Questions for the design review
+
+1. Should the first release support residential and business CAFs, or residential first?
+2. Which service fields are required now: username/external ID, plan, bandwidth, installation fee or deposit?
+3. What customer declaration/signature evidence is required: uploaded signed form, captured signature, or a later signing provider?
+4. Should billing address be collected now in addition to identity/permanent and installation addresses?
+
+No application behaviour or schema was changed during this reference review. Decisions above remain proposals unless explicitly identified as owner direction.
+
+## Owner decisions following reference review — 2026-10-21
+
+These decisions supersede the corresponding open questions above. This entry records requirements; implementation and validation are still pending.
+
+- **Customer types:** support both residential and business CAFs in the first redesign. Business CAFs require a GST number and GST certificate file. Future Surepass GST verification is retained in the roadmap; format validation/upload alone must not be labelled GST verified.
+- **Required service username:** generate a proposed username from the customer's first name plus the last five digits of the mobile number. On collision, try the last six digits, then seven, and progressively up to the full number. Normalise names consistently and define a fallback for names with no usable characters. If every candidate collides, propose a short additional suffix. Check availability while creating, but enforce uniqueness atomically on the server as well; a browser availability check alone cannot prevent concurrent collisions. Agree whether uniqueness is portal-wide or per company and, later, against the external RADIUS account namespace. Keep a generated username stable when a customer's name/mobile changes unless an explicit rename workflow is agreed. Do not expose customer details through username availability responses.
+- **Signing:** declaration/signature capture method remains undecided. Retain uploaded signed CAF, on-screen signature and provider-backed signing as future options; do not silently select one for implementation.
+- **Addresses:** billing and installation addresses are both mandatory. Offer "billing address same as installation" to avoid duplicate entry while retaining both address values in the submitted/approved snapshot. Keep identity/provider-returned address distinct where collected.
+- **State and city selection:** show state first, then load cities for the selected state. Changing state must clear any incompatible city. Use a maintained Indian address dataset or server-side lookup source, and allow an authorised correction path for missing/new localities rather than blocking legitimate addresses.
+- **PIN lookup:** entering a valid PIN should look up and populate state and city where the result is unambiguous. If several localities/cities are returned, ask the user to select the appropriate result; do not silently choose the first post office or treat a postal district as an exact city. Preserve typed address lines and show lookup failures clearly. Confirm the lookup source before implementation; PIN lookup does not verify a customer's residence.
+- **Upload limit:** maximum **4 MB per file** for documents and proofs, including the business GST certificate. Proposed precise implementation limit: 4 × 1024 × 1024 bytes (4 MiB), with consistent UI wording and server-side enforcement. Replace the current 8 MB limit throughout the upload path. Existing stored documents larger than the new limit must remain readable; do not delete or rewrite them. Enforce total request limits separately.
+
+### Remaining implementation choices for review
+
+- Username uniqueness scope is confirmed as company-specific (see clarification below). Decide whether staff may override a generated suggestion. Do not assume local availability proves availability on a future external server.
+- State/city/PIN dataset or lookup provider, including update process, ambiguous results and outage handling.
+- Whether identity/permanent address is required in addition to the confirmed mandatory billing and installation addresses.
+- Required declaration wording and interim submission evidence while the signing method remains undecided.
+
+### Confirmed username namespace clarification — 2026-10-21
+
+The same service username may exist in different companies. Within one company, it must be unique across all counters/franchises, not merely within each franchise. This supersedes the earlier suggested portal-wide default and resolves the uniqueness-scope question.
+
+Generate and check candidates within the application's authorised company scope. Enforce the invariant atomically using company ID plus normalised service username; concurrent submissions from different franchises of the same company must not create duplicates. Resolve conflicts by trying the next candidate rather than trusting a previous availability response. A future RADIUS integration must map this company-scoped namespace explicitly if the external server uses a different namespace.
+
+## Implementation update — 2026-10-21
+
+The first CAF redesign is implemented for testing. This supersedes the earlier
+"implementation pending" statements for the following items only:
+
+- Residential/business entry, business name, GST number and GST certificate requirements.
+- Company-scoped generated usernames with availability preview, server allocation and database uniqueness across franchises. Staff overrides are not enabled; correction retains the assigned username.
+- Required installation/billing addresses and copy option, bundled state/city lists and server-side postal PIN lookup. The selected sources, attribution and refresh instructions are in `src/data/README.md`; missing cities can be entered manually.
+- Collapsible responsive sections, document previews, required evidence, server/browser 4 MB limits and a review summary.
+- Private server drafts for partial field values, with version conflict protection. Draft attachments remain a follow-up: selected files are not persisted until submission, and the UI explicitly explains this.
+- Rejected-CAF correction/resubmission, stable identifiers, revision/history recording, original-file retention and atomic final review. New approvals retain a snapshot for the later export implementation; previously approved CAFs are not retrospectively snapshotted.
+- Interim acknowledgement by the submitting staff member. This is not customer consent/signature evidence and does not resolve the future signing decision.
+
+**Still retained for future updates:** customer signing and approved PDF/evidence
+downloads; Surepass identity/GST verification; mobile/email verification; S3
+migration; real RADIUS API mapping/provisioning; the deferred Storage Settings
+404; reviewer assignment and a dedicated history viewer; separate identity/permanent
+address requirements; draft attachments, autosave and draft deletion/retention;
+the billing/network/payment ideas retained above. A subscriber/account model may
+later link relocation/plan-change CAFs to an existing service account rather than
+allocating another username. Agree that lifecycle before implementing external
+RADIUS synchronisation.
+
+The rollout uses an additive migration and checks legacy company-level username
+conflicts without renaming accounts. Deployment/preflight instructions are in
+`README.md`; exact changes and validation are recorded in `CHANGELOG.md`.

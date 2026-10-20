@@ -123,3 +123,86 @@ See [Product notes and improvement plan](PRODUCT-NOTES.md) for known gaps, CAF f
 - **OIDC/LDAP** — Replace `src/lib/session.ts` / login route with your IdP.
 - **Reports/exports** — Add CSV/PDF exports scoped by tenant.
 - **Bulk migrations** — Copy objects between providers by iterating documents and using the stored keys.
+## CAF form redesign (2026-10-21)
+
+New CAFs support residential and business customers. Business applications require
+a registered business name, GST number and GST certificate. Both installation
+and billing addresses are required; the billing address may be copied from the
+installation address. States and dependent city lists are bundled locally. PIN
+lookup uses a server-side postal service with a manual correction/failure path.
+Address data attribution and update instructions are in `src/data/README.md`.
+
+Service usernames are assigned from the first name plus the last five mobile
+digits, increasing to six, seven and up to ten digits on collision, then a suffix
+if needed. They are unique across all franchises of a company, while different
+companies may reuse them. Availability is advisory until submission. Database
+constraints and company-scoped allocation handle concurrent submissions. Existing
+usernames are retained during corrections; external RADIUS availability is not
+checked or promised by this feature.
+
+Use **Save draft** to save partial field values on the server; resume from **New
+CAF**. Drafts are private to their owner and tenancy. Selected files are not saved
+in drafts and must be reattached before submission. Concurrent draft edits show a
+conflict rather than overwriting another tab's changes. Review the summary before
+submitting. Photo, identity proof and address proof are required, plus the GST
+certificate for businesses. Uploads are limited to 4 MiB per file (labelled 4 MB),
+10 documents and a 42 MiB total multipart request. Existing larger documents remain
+readable. Basic file signature checks supplement MIME/size checks; these are not
+malware scanning or document authenticity verification.
+
+Rejected CAF detail pages offer **Correct and resubmit**. The CAF number and
+username are retained, the revision increases, and prior fields/document references
+are recorded in the audit log. Uploading a category again replaces that category
+in the active CAF; its previous original files remain stored. Approved applications
+cannot be edited through this flow. Approval records an immutable snapshot of the
+reviewed details/document references for the later PDF implementation. Previously
+approved records are not retroactively snapshotted. The acknowledgement is by the
+submitting staff member, not a customer signature. Customer signing, approved PDF
+downloads, Surepass identity/GST, contact verification, S3 and real RADIUS API
+provisioning remain roadmap work in `PRODUCT-NOTES.md`.
+
+## Upgrade and test
+
+The additive migration preserves existing records and document references. Before
+rebuilding an existing deployment, check for duplicate legacy usernames within a
+company. On the Linux VM:
+
+```sh
+git pull --ff-only origin main
+cat scripts/check-caf-usernames.sql | docker compose exec -T db psql -v ON_ERROR_STOP=1 -U cafapp -d caf_portal
+```
+
+On PowerShell, replace `cat scripts/check-caf-usernames.sql` with
+`Get-Content scripts/check-caf-usernames.sql`. An empty result is expected. If
+duplicates appear, review them before deployment; the migration stops rather than
+renaming existing accounts. A failed migration is rolled back at the SQL level,
+but Prisma may record it as failed: after resolving the actual conflict through a
+reviewed process, an operator must mark this migration rolled back with Prisma
+Migrate Resolve before retrying. Never reset the database to resolve it.
+
+After a clean preflight:
+
+```sh
+docker compose up -d --build --no-deps app
+docker compose logs --tail=80 app
+```
+
+Keep `RUN_SEED=0` for normal operation. No `.env` replacement, database reset or
+volume removal is needed. The entrypoint applies the additive migration before
+starting the server. Existing CAFs may lack the newly required values; these are
+required on new submissions/corrections, not invented for historical records.
+
+Validation scripts (disposable fixtures only):
+
+```sh
+node --test scripts/test-production-startup.cjs
+sh scripts/test-caf-upgrade.sh
+CAF_TEST_IMAGE=<built-image> sh scripts/test-docker-startup.sh
+CAF_TEST_IMAGE=<built-image> sh scripts/test-super-settings.sh
+```
+
+The settings integration harness also runs `test-caf.cjs`, covering real HTTP
+submissions, scoping, usernames, business requirements, upload limits, drafts and
+review/correction. `test-caf-browser.cjs` accepts a temporary Playwright module
+path, an SSH-forwarded isolated URL and an artifact directory, and uses installed
+Chrome for desktop/mobile form checks. Its fixture credentials are test-only.

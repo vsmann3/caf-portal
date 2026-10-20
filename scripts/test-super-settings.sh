@@ -44,6 +44,7 @@ until [ "$(curl --noproxy '*' --max-time 3 -s -o /dev/null -w '%{http_code}' "ht
   sleep 1
 done
 docker exec -i "$app" node < scripts/test-super-settings.cjs
+docker exec -i "$app" node < scripts/test-caf.cjs
 passed=1
 printf 'TEST_APP=%s\nTEST_DB=%s\nTEST_MAIL=%s\nTEST_NETWORK=%s\nTEST_PORT=%s\nTEST_IMAGE=%s\n' "$app" "$db" "$mail" "$network" "$port" "$image" > test-fixture.env
 echo "PASS: settings and SMTP integration. Test port: $port"

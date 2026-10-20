@@ -45,6 +45,7 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const items = NAV.filter((n) => n.roles.includes(role));
 
@@ -56,9 +57,10 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
+    <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white md:w-64 md:border-b-0 md:border-r">
       <div className="border-b border-slate-200 px-5 py-5">
         <p className="text-lg font-bold text-blue-700">{portalName}</p>
+        <div className="md:hidden"><button type="button" className="btn-secondary mt-2" aria-expanded={menuOpen} aria-controls="portal-navigation" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? "Close menu" : "Menu"}</button></div>
         {companyName && (
           <p className="mt-1 truncate text-sm font-medium text-slate-700">{companyName}</p>
         )}
@@ -67,7 +69,7 @@ export function Sidebar({
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav id="portal-navigation" className={`${menuOpen ? "block" : "hidden"} flex-1 space-y-1 px-3 py-4 md:block`}>
         {items.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(item.href + "/");
@@ -75,6 +77,7 @@ export function Sidebar({
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setMenuOpen(false)}
               className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active
                   ? "bg-blue-50 text-blue-700"
@@ -87,7 +90,7 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-slate-200 px-5 py-4">
+      <div className={`${menuOpen ? "block" : "hidden"} border-t border-slate-200 px-5 py-4 md:block`}>
         <p className="truncate text-sm font-medium text-slate-800">{userName}</p>
         <p className="text-xs text-slate-500">{ROLE_LABEL[role]}</p>
         <button

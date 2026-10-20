@@ -34,7 +34,7 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
       <Sidebar
         role={session.role}
         portalName={portal.name}
@@ -42,7 +42,7 @@ export default async function AppLayout({
         companyName={company?.name}
         franchiseName={franchise?.name}
       />
-      <main className="flex-1 overflow-x-auto p-6 lg:p-8">{children}</main>
+      <main className="min-w-0 flex-1 overflow-x-auto p-4 sm:p-6 lg:p-8">{children}</main>
     </div>
   );
 }

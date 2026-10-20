@@ -1,8 +1,11 @@
 "use client";
-
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { PageHeader } from "@/components/ui";
+import { CafAddressFields, type CafAddress } from "@/components/caf-address";
+import { DOCUMENT_OPTIONS, MAX_DOCUMENT_BYTES } from "@/lib/caf-fields";
+import { createApplicationSchema } from "@/lib/validators";
 
 export interface FranchiseOption {
   id: string;
@@ -10,360 +13,771 @@ export interface FranchiseOption {
   code: string;
   companyName: string;
 }
-
-const DOC_TYPES = [
-  { value: "PASSPORT_PHOTO", label: "Passport Photo" },
-  { value: "ID_PROOF", label: "ID Proof (Aadhaar/PAN/Voter…)" },
-  { value: "ADDRESS_PROOF", label: "Address Proof" },
-  { value: "SIGNED_CAF", label: "Signed CAF / Declaration" },
-  { value: "BANK_PROOF", label: "Bank / Payment Proof" },
-  { value: "BUSINESS_PROOF", label: "Business Proof (commercial)" },
-  { value: "OTHER", label: "Other" },
-];
-
-const ID_TYPES = [
-  { value: "AADHAAR", label: "Aadhaar Card" },
-  { value: "PAN", label: "PAN Card" },
-  { value: "VOTER_ID", label: "Voter ID" },
-  { value: "PASSPORT", label: "Passport" },
-  { value: "DRIVING_LICENSE", label: "Driving License" },
-  { value: "OTHER", label: "Other" },
-];
-
-const CONNECTION_TYPES = [
-  { value: "NEW", label: "New Connection" },
-  { value: "RELOCATION", label: "Relocation" },
-  { value: "CHANGE_OF_PLAN", label: "Change of Plan" },
-  { value: "TRANSFER", label: "Transfer" },
-];
-
-interface DocRow {
-  docType: string;
-  file: File | null;
+type Values = Record<string, string | boolean>;
+type SavedDocument = { id: string; documentType: string; originalName: string };
+type Draft = {
+  id: string;
+  version: number;
+  payload: Values;
+  updatedAt: string;
+};
+function address(v: Values, billing = false): CafAddress {
+  return {
+    line1: String(v[billing ? "billingAddressLine1" : "addressLine1"] ?? ""),
+    line2: String(v[billing ? "billingAddressLine2" : "addressLine2"] ?? ""),
+    city: String(v[billing ? "billingCity" : "city"] ?? ""),
+    state: String(v[billing ? "billingState" : "state"] ?? ""),
+    pincode: String(v[billing ? "billingPincode" : "pincode"] ?? ""),
+  };
 }
-
-const EMPTY_DOC_ROW: DocRow = { docType: "", file: null };
-
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details open className="card p-5">
+      <summary className="cursor-pointer font-semibold text-slate-900">
+        {title}
+      </summary>
+      <div className="mt-5">{children}</div>
+    </details>
+  );
+}
+function Preview({ file }: { file: File }) {
+  const [url, setUrl] = useState("");
+  useEffect(() => {
+    const object = URL.createObjectURL(file);
+    setUrl(object);
+    return () => URL.revokeObjectURL(object);
+  }, [file]);
+  return (
+    <div className="mt-2">
+      {file.type.startsWith("image/") && url && (
+        <img
+          src={url}
+          alt={file.name}
+          className="mb-2 h-28 max-w-full rounded object-contain"
+        />
+      )}
+      <a
+        className="text-sm text-blue-700 underline"
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Preview {file.name}
+      </a>
+    </div>
+  );
+}
 export function CafForm({
   franchises,
   lockedFranchiseId,
+  initial,
+  initialDocuments = [],
+  applicationId,
+  revision,
 }: {
   franchises: FranchiseOption[];
   lockedFranchiseId: string | null;
+  initial?: Values;
+  initialDocuments?: SavedDocument[];
+  applicationId?: string;
+  revision?: number;
 }) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [docs, setDocs] = useState<DocRow[]>([
-    { docType: "PASSPORT_PHOTO", file: null },
-    { docType: "ID_PROOF", file: null },
-    { docType: "ADDRESS_PROOF", file: null },
-    { ...EMPTY_DOC_ROW },
-  ]);
-
-  const defaultFranchise = useMemo(() => {
-    if (lockedFranchiseId) return lockedFranchiseId;
-    return franchises[0]?.id ?? "";
-  }, [franchises, lockedFranchiseId]);
-
-  const [franchiseId, setFranchiseId] = useState(defaultFranchise);
-  const lockedFranchise = franchises.find((f) => f.id === lockedFranchiseId);
-
-  function setDocRow(index: number, patch: Partial<DocRow>) {
-    setDocs((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  const [values, setValues] = useState<Values>({
+    franchiseId: lockedFranchiseId ?? franchises[0]?.id ?? "",
+    customerType: "RESIDENTIAL",
+    connectionType: "NEW",
+    idProofType: "AADHAAR",
+    billingSame: true,
+    ...initial,
+    declarationAccepted: false,
+  });
+  const [docs, setDocs] = useState<{ category: string; file: File | null }[]>(
+    ["PASSPORT_PHOTO", "ID_PROOF", "ADDRESS_PROOF"].map((category) => ({
+      category,
+      file: null,
+    })),
+  );
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [draft, setDraft] = useState<{ id: string; version: number } | null>(
+    null,
+  );
+  const [savedAt, setSavedAt] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [errors, setErrors] = useState<Record<string, string[] | undefined>>(
+    {},
+  );
+  const [reviewing, setReviewing] = useState(false);
+  const [username, setUsername] = useState("");
+  const [usernameMessage, setUsernameMessage] = useState("");
+  const dirty = useRef(false);
+  function patch(fields: Values) {
+    dirty.current = true;
+    setReviewing(false);
+    setValues((v) => ({ ...v, ...fields }));
   }
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-
-    const formEl = e.currentTarget;
-    const fd = new FormData(formEl);
-
-    const files = docs.filter((d) => d.file);
-    if (files.length === 0) {
-      setError("Please attach at least one document (photo or ID proof).");
+  function refreshDrafts() {
+    fetch("/api/caf-drafts")
+      .then((r) => r.json())
+      .then((d) => setDrafts(d.drafts ?? []))
+      .catch(() => {});
+  }
+  useEffect(() => {
+    if (!applicationId) refreshDrafts();
+  }, [applicationId]);
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (dirty.current) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, []);
+  useEffect(() => {
+    if (applicationId && initial?.broadbandUsername) {
+      setUsername(String(initial.broadbandUsername));
+      setUsernameMessage("Existing username retained");
       return;
     }
-
-    const payload = {
-      franchiseId,
-      customerName: fd.get("customerName"),
-      gender: fd.get("gender") || null,
-      dob: fd.get("dob") || null,
-      fatherName: fd.get("fatherName"),
-      mobile: fd.get("mobile"),
-      email: fd.get("email"),
-      altPhone: fd.get("altPhone"),
-      addressLine1: fd.get("addressLine1"),
-      addressLine2: fd.get("addressLine2"),
-      city: fd.get("city"),
-      state: fd.get("state"),
-      pincode: fd.get("pincode"),
-      idProofType: fd.get("idProofType"),
-      idNumber: fd.get("idNumber"),
-      connectionType: fd.get("connectionType"),
-      customerType: fd.get("customerType"),
-      planName: fd.get("planName"),
-      bandwidth: fd.get("bandwidth"),
-      connectionAddress: fd.get("connectionAddress"),
-      broadbandUsername: fd.get("broadbandUsername"),
-      remarks: fd.get("remarks"),
-    };
-
-    const body = new FormData();
-    body.append("data", JSON.stringify(payload));
-    for (const d of files) {
-      body.append("files", d.file!);
-      body.append("docType", d.docType || "OTHER");
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/applications", { method: "POST", body });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(json.error ?? "Failed to submit CAF");
-        return;
+    setUsername("");
+    setUsernameMessage("");
+    if (
+      !values.customerName ||
+      !/^[6-9]\d{9}$/.test(String(values.mobile ?? ""))
+    )
+      return;
+    const abort = new AbortController();
+    const timer = setTimeout(async () => {
+      setUsernameMessage("Checking company username availability…");
+      try {
+        const r = await fetch("/api/applications/username", {
+          method: "POST",
+          signal: abort.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            franchiseId: values.franchiseId,
+            name: values.customerName,
+            mobile: values.mobile,
+          }),
+        });
+        const d = await r.json();
+        if (!abort.signal.aborted) {
+          setUsername(d.username ?? "");
+          setUsernameMessage(d.message ?? d.error ?? "Confirmed on submission");
+        }
+      } catch {
+        if (!abort.signal.aborted)
+          setUsernameMessage(
+            "Availability check unavailable; username assigned on submission.",
+          );
       }
-      router.push(`/customers/${json.application.id}`);
-      router.refresh();
-    } catch {
-      setError("Network error — please try again.");
+    }, 450);
+    return () => {
+      clearTimeout(timer);
+      abort.abort();
+    };
+  }, [
+    values.customerName,
+    values.mobile,
+    values.franchiseId,
+    applicationId,
+    initial,
+  ]);
+  function setAddress(v: CafAddress, billing: boolean) {
+    patch(
+      billing
+        ? {
+            billingAddressLine1: v.line1,
+            billingAddressLine2: v.line2,
+            billingCity: v.city,
+            billingState: v.state,
+            billingPincode: v.pincode,
+          }
+        : {
+            addressLine1: v.line1,
+            addressLine2: v.line2,
+            city: v.city,
+            state: v.state,
+            pincode: v.pincode,
+          },
+    );
+  }
+  function payload() {
+    const billing = address(values, !values.billingSame);
+    return {
+      ...values,
+      businessName:
+        values.customerType === "COMMERCIAL"
+          ? String(values.businessName ?? "")
+          : "",
+      gstNumber:
+        values.customerType === "COMMERCIAL"
+          ? String(values.gstNumber ?? "")
+          : "",
+      gender: values.gender || null,
+      dob: values.dob || null,
+      billingAddressLine1: billing.line1,
+      billingAddressLine2: billing.line2,
+      billingCity: billing.city,
+      billingState: billing.state,
+      billingPincode: billing.pincode,
+      ...(draft ? { draftId: draft.id, draftVersion: draft.version } : {}),
+      ...(applicationId ? { applicationId, revision } : {}),
+    };
+  }
+  function check() {
+    const result = createApplicationSchema.safeParse(payload());
+    const fields: Record<string, string[] | undefined> = result.success
+      ? {}
+      : result.error.flatten().fieldErrors;
+    const categories = new Set([
+      ...initialDocuments.map((d) => d.documentType),
+      ...docs.filter((d) => d.file).map((d) => d.category),
+    ]);
+    if (
+      [
+        "PASSPORT_PHOTO",
+        "ID_PROOF",
+        "ADDRESS_PROOF",
+        ...(values.customerType === "COMMERCIAL" ? ["GST_CERTIFICATE"] : []),
+      ].some((t) => !categories.has(t))
+    )
+      fields.documents = [
+        "Attach customer photo, identity proof, address proof and (for businesses) GST certificate.",
+      ];
+    setErrors(fields);
+    setNotice(
+      Object.keys(fields).length ? "Please correct the listed fields." : "",
+    );
+    return !Object.keys(fields).length;
+  }
+  async function saveDraft() {
+    setBusy(true);
+    setNotice("");
+    try {
+      const r = await fetch("/api/caf-drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...draft,
+          payload: { ...values, declarationAccepted: false },
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "Draft save failed");
+      setDraft({ id: d.draft.id, version: d.draft.version });
+      setSavedAt(new Date(d.draft.updatedAt).toLocaleString());
+      dirty.current = docs.some((d) => d.file);
+      setNotice(
+        "Draft fields saved. Selected files are not saved in drafts; attach them before submission.",
+      );
+      refreshDrafts();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Draft save failed");
     } finally {
-      setSubmitting(false);
+      setBusy(false);
     }
   }
-
+  async function submit() {
+    if (!check()) return;
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("data", JSON.stringify(payload()));
+      for (const d of docs)
+        if (d.file) {
+          form.append("files", d.file);
+          form.append("docType", d.category);
+        }
+      const r = await fetch("/api/applications", {
+        method: "POST",
+        body: form,
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setErrors(d.fields ?? {});
+        throw new Error(d.error ?? "CAF submission failed");
+      }
+      dirty.current = false;
+      router.push(`/customers/${d.application.id}`);
+      router.refresh();
+    } catch (e) {
+      setNotice(
+        e instanceof Error
+          ? e.message
+          : "Network error. Your fields and selected files remain available.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  const input = (
+    key: string,
+    label: string,
+    type = "text",
+    maxLength = 150,
+  ) => (
+    <div>
+      <label className="field-label" htmlFor={key}>
+        {label}
+      </label>
+      <input
+        id={key}
+        type={type}
+        maxLength={maxLength}
+        className="field-input"
+        value={String(values[key] ?? "")}
+        onChange={(e) => patch({ [key]: e.target.value })}
+        aria-invalid={!!errors[key]}
+      />
+      {errors[key] && (
+        <p className="mt-1 text-sm text-red-700">{errors[key]?.[0]}</p>
+      )}
+    </div>
+  );
+  const select = (key: string, label: string, options: string[][]) => (
+    <div>
+      <label className="field-label" htmlFor={key}>
+        {label}
+      </label>
+      <select
+        id={key}
+        className="field-input"
+        value={String(values[key] ?? "")}
+        onChange={(e) => patch({ [key]: e.target.value })}
+      >
+        {options.map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
   return (
     <div className="max-w-5xl">
       <PageHeader
-        title="New Customer Application (CAF)"
-        subtitle="Fill in customer details and upload supporting documents."
+        title={
+          applicationId ? "Correct and resubmit CAF" : "New eCAF application"
+        }
+        subtitle="Save your progress, attach evidence and review before submitting for approval."
       />
-
-      <form onSubmit={onSubmit} className="space-y-5">
-        {/* Franchise */}
-        <section className="card p-5">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">Franchise</h3>
-          {lockedFranchise ? (
-            <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
-              <span className="font-medium">{lockedFranchise.name}</span>{" "}
-              <span className="text-slate-500">({lockedFranchise.code})</span>
-              <p className="mt-0.5 text-xs text-slate-500">
-                You are filing for your own franchise only.
-              </p>
-            </div>
-          ) : (
-            <div>
-              <label className="field-label" htmlFor="franchiseId">Filing for franchise</label>
-              <select
-                id="franchiseId"
-                className="field-input max-w-md"
-                value={franchiseId}
-                onChange={(e) => setFranchiseId(e.target.value)}
-                required
-              >
-                {franchises.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.companyName ? `${f.companyName} — ` : ""}{f.name} ({f.code})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </section>
-
-        {/* Applicant */}
-        <section className="card p-5">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">Applicant Details</h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label className="field-label" htmlFor="customerName">Full Name *</label>
-              <input id="customerName" name="customerName" required minLength={2} maxLength={150} className="field-input" placeholder="e.g. Rahul Sharma" />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="gender">Gender</label>
-              <select id="gender" name="gender" className="field-input" defaultValue="">
-                <option value="">Select…</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="dob">Date of Birth</label>
-              <input id="dob" name="dob" type="date" className="field-input" />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="fatherName">Father / Spouse Name</label>
-              <input id="fatherName" name="fatherName" maxLength={150} className="field-input" />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="mobile">Mobile Number *</label>
-              <input id="mobile" name="mobile" required inputMode="numeric" pattern="[6-9][0-9]{9}" title="10-digit Indian mobile number" className="field-input" placeholder="98XXXXXXXX" />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="email">Email</label>
-              <input id="email" name="email" type="email" maxLength={200} className="field-input" />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="altPhone">Alternate Phone</label>
-              <input id="altPhone" name="altPhone" maxLength={20} className="field-input" />
-            </div>
-          </div>
-        </section>
-
-        {/* Address */}
-        <section className="card p-5">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">Installation Address</h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="sm:col-span-2 lg:col-span-3">
-              <label className="field-label" htmlFor="addressLine1">Address Line 1 *</label>
-              <input id="addressLine1" name="addressLine1" required minLength={3} maxLength={300} className="field-input" placeholder="House / Flat No., Street, Landmark" />
-            </div>
-            <div className="sm:col-span-2 lg:col-span-3">
-              <label className="field-label" htmlFor="addressLine2">Address Line 2</label>
-              <input id="addressLine2" name="addressLine2" maxLength={300} className="field-input" />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="city">City *</label>
-              <input id="city" name="city" required maxLength={100} className="field-input" />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="state">State *</label>
-              <input id="state" name="state" required maxLength={100} className="field-input" />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="pincode">PIN Code *</label>
-              <input id="pincode" name="pincode" required inputMode="numeric" pattern="[0-9]{6}" title="6-digit PIN code" className="field-input" />
-            </div>
-          </div>
-        </section>
-
-        {/* Identity */}
-        <section className="card p-5">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">Identity Proof</h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label className="field-label" htmlFor="idProofType">ID Proof Type *</label>
-              <select id="idProofType" name="idProofType" required className="field-input" defaultValue="AADHAAR">
-                {ID_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="idNumber">ID Number *</label>
-              <input id="idNumber" name="idNumber" required maxLength={40} className="field-input" placeholder="As printed on the ID" />
-            </div>
-          </div>
-        </section>
-
-        {/* Connection */}
-        <section className="card p-5">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">Connection Details</h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label className="field-label" htmlFor="connectionType">Connection Type *</label>
-              <select id="connectionType" name="connectionType" required className="field-input" defaultValue="NEW">
-                {CONNECTION_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="customerType">Customer Type</label>
-              <select id="customerType" name="customerType" className="field-input" defaultValue="RESIDENTIAL">
-                <option value="RESIDENTIAL">Residential</option>
-                <option value="COMMERCIAL">Commercial / Business</option>
-              </select>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="planName">Plan Name</label>
-              <input id="planName" name="planName" maxLength={100} className="field-input" placeholder="e.g. Home Plus 100" />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="bandwidth">Bandwidth</label>
-              <input id="bandwidth" name="bandwidth" maxLength={50} className="field-input" placeholder="e.g. 100 Mbps" />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="broadbandUsername">Broadband Username</label>
-              <input id="broadbandUsername" name="broadbandUsername" maxLength={100} className="field-input" placeholder="If already provisioned in RADIUS" />
-            </div>
-            <div className="sm:col-span-2 lg:col-span-3">
-              <label className="field-label" htmlFor="connectionAddress">Installation Address (if different)</label>
-              <input id="connectionAddress" name="connectionAddress" maxLength={500} className="field-input" />
-            </div>
-            <div className="sm:col-span-2 lg:col-span-3">
-              <label className="field-label" htmlFor="remarks">Remarks</label>
-              <textarea id="remarks" name="remarks" rows={2} maxLength={1000} className="field-input" />
-            </div>
-          </div>
-        </section>
-
-        {/* Documents */}
-        <section className="card p-5">
-          <h3 className="mb-4 text-base font-semibold text-slate-900">Documents</h3>
-          <p className="mb-3 text-sm text-slate-500">
-            JPG, PNG, WEBP or PDF · max 8 MB per file.
-          </p>
-          <div className="space-y-3">
-            {docs.map((row, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-3">
+      {!applicationId && drafts.length > 0 && (
+        <div className="card mb-5 p-5">
+          <label className="field-label" htmlFor="resume">
+            Resume your saved draft
+          </label>
+          <select
+            id="resume"
+            className="field-input"
+            value={draft?.id ?? ""}
+            onChange={(e) => {
+              const d = drafts.find((d) => d.id === e.target.value);
+              if (
+                !d ||
+                (dirty.current &&
+                  !window.confirm(
+                    "Replace unsaved entries with this saved draft?",
+                  ))
+              )
+                return;
+              setValues({ ...d.payload, declarationAccepted: false });
+              setDraft({ id: d.id, version: d.version });
+              setDocs([]);
+              setSavedAt(new Date(d.updatedAt).toLocaleString());
+              setErrors({});
+              setReviewing(false);
+              dirty.current = false;
+            }}
+          >
+            <option value="">Select draft</option>
+            {drafts.map((d) => (
+              <option key={d.id} value={d.id}>
+                {String(d.payload.customerName || "Unnamed customer")} —{" "}
+                {new Date(d.updatedAt).toLocaleString()}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (check()) setReviewing(true);
+        }}
+        className="space-y-5"
+      >
+        <fieldset disabled={busy} className="space-y-5">
+          <Section title="Application">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="field-label" htmlFor="franchiseId">
+                  Filing franchise *
+                </label>
                 <select
-                  className="field-input w-64"
-                  value={row.docType}
-                  onChange={(e) => setDocRow(i, { docType: e.target.value })}
-                  required
+                  id="franchiseId"
+                  disabled={!!lockedFranchiseId || !!applicationId}
+                  className="field-input"
+                  value={String(values.franchiseId)}
+                  onChange={(e) => patch({ franchiseId: e.target.value })}
                 >
-                  <option value="">Document type…</option>
-                  {DOC_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
+                  {franchises.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.companyName ? `${f.companyName} / ` : ""}{f.name} ({f.code})
+                    </option>
                   ))}
                 </select>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  className="block w-full max-w-md text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
-                  onChange={(e) => setDocRow(i, { file: e.target.files?.[0] ?? null })}
-                />
-                {row.file && (
-                  <span className="text-xs text-green-700">✓ {row.file.name}</span>
-                )}
-                {docs.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setDocs((prev) => prev.filter((_, j) => j !== i))}
-                    className="text-xs font-medium text-red-600 hover:underline"
-                  >
-                    Remove
-                  </button>
-                )}
               </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => setDocs((prev) => [...prev, { ...EMPTY_DOC_ROW }])}
-            className="btn-secondary mt-4"
+              {select("customerType", "Customer type *", [
+                ["RESIDENTIAL", "Residential"],
+                ["COMMERCIAL", "Business"],
+              ])}
+              {select("connectionType", "Application type *", [
+                ["NEW", "New connection"],
+                ["RELOCATION", "Relocation"],
+                ["CHANGE_OF_PLAN", "Change of plan"],
+                ["TRANSFER", "Transfer"],
+              ])}
+            </div>
+          </Section>
+          <Section title="Customer details">
+            <div className="grid gap-4 md:grid-cols-2">
+              {input(
+                "customerName",
+                "Customer / authorised signatory full name *",
+              )}
+              {input("fatherName", "Father / spouse name")}
+              {input("mobile", "Mobile number *", "tel", 10)}
+              {input("email", "Email address", "email", 200)}
+              {input("altPhone", "Alternate phone", "tel", 20)}
+              {input("dob", "Date of birth", "date")}
+              {select("gender", "Gender", [
+                ["", "Select"],
+                ["MALE", "Male"],
+                ["FEMALE", "Female"],
+                ["OTHER", "Other"],
+              ])}
+            </div>
+            <p className="mt-3 text-sm text-slate-500">
+              Mobile and email verification are planned. Entering details does
+              not mark them verified.
+            </p>
+          </Section>
+          {values.customerType === "COMMERCIAL" && (
+            <Section title="Business details">
+              <div className="grid gap-4 md:grid-cols-2">
+                {input("businessName", "Registered business name *")}
+                {input("gstNumber", "GST number *", "text", 15)}
+              </div>
+              <p className="mt-3 text-sm text-slate-500">
+                Attach GST certificate below. Surepass GST verification is
+                planned.
+              </p>
+            </Section>
+          )}
+          <Section title="Addresses">
+            <CafAddressFields
+              label="Installation address"
+              value={address(values)}
+              onChange={(v) => setAddress(v, false)}
+            />
+            <label className="my-5 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={!!values.billingSame}
+                onChange={(e) => patch({ billingSame: e.target.checked })}
+              />
+              Billing address is the same as installation
+            </label>
+            {values.billingSame ? (
+              <p className="text-sm text-slate-600">
+                Installation details will also be saved as the required billing
+                address.
+              </p>
+            ) : (
+              <CafAddressFields
+                label="Billing address"
+                value={address(values, true)}
+                onChange={(v) => setAddress(v, true)}
+              />
+            )}
+            <p className="mt-4 text-xs text-slate-500">Address reference data: <a className="underline" href="https://github.com/dr5hn/countries-states-cities-database" target="_blank" rel="noreferrer">CSC Database contributors (ODbL)</a>. Missing cities can be entered manually.</p>
+          </Section>
+          <Section title="Service details">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="field-label" htmlFor="service-username">
+                  Service username *
+                </label>
+                <input
+                  id="service-username"
+                  readOnly
+                  className="field-input bg-slate-50"
+                  value={username}
+                  placeholder="Generated from name and mobile"
+                />
+                <p className="mt-1 text-sm text-slate-500" role="status">
+                  {usernameMessage ||
+                    "Enter name and mobile. Unique across this company's franchises."}
+                </p>
+              </div>
+              {input("planName", "Plan name", "text", 100)}
+              {input("bandwidth", "Bandwidth", "text", 50)}
+            </div>
+          </Section>
+          <Section title="Identity and supporting documents">
+            <div className="mb-5 grid gap-4 md:grid-cols-2">
+              {select("idProofType", "Identity document type *", [
+                ["AADHAAR", "Aadhaar"],
+                ["PAN", "PAN"],
+                ["VOTER_ID", "Voter ID"],
+                ["PASSPORT", "Passport"],
+                ["DRIVING_LICENSE", "Driving licence"],
+                ["OTHER", "Other"],
+              ])}
+              {input("idNumber", "Identity document number *", "text", 40)}
+            </div>
+            <p className="mb-4 text-sm text-slate-600">
+              Required: customer photo, identity proof, address proof
+              {values.customerType === "COMMERCIAL" ? ", GST certificate" : ""}.
+              JPG, PNG, WEBP or PDF; maximum 4 MB per file, 10 files per CAF.
+            </p>
+            {initialDocuments.length > 0 && (
+              <div className="mb-4 rounded bg-slate-50 p-3">
+                <p className="text-sm font-medium">
+                  Existing evidence retained unless you upload the same category
+                  again:
+                </p>
+                {initialDocuments.map((d) => (
+                  <a
+                    key={d.id}
+                    className="block text-sm text-blue-700 underline"
+                    href={`/api/documents/${d.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {d.documentType.replaceAll("_", " ")}: {d.originalName}
+                  </a>
+                ))}
+              </div>
+            )}
+            <div className="space-y-4">
+              {docs.map((doc, index) => (
+                <div
+                  key={index}
+                  className="rounded-lg border border-slate-200 p-3"
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <select
+                      aria-label={`Document ${index + 1} category`}
+                      className="field-input max-w-xs"
+                      value={doc.category}
+                      onChange={(e) => {
+                        dirty.current = true;
+                        setReviewing(false);
+                        setDocs((rows) =>
+                          rows.map((r, i) =>
+                            i === index
+                              ? { ...r, category: e.target.value }
+                              : r,
+                          ),
+                        );
+                      }}
+                    >
+                      {DOCUMENT_OPTIONS.map(([v, l]) => (
+                        <option key={v} value={v}>
+                          {l}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label={`Document ${index + 1} file`}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      className="max-w-full text-sm"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null;
+                        if (file && file.size > MAX_DOCUMENT_BYTES) {
+                          setNotice(`${file.name}: maximum 4 MB per file.`);
+                          e.target.value = "";
+                          return;
+                        }
+                        dirty.current = true;
+                        setReviewing(false);
+                        setDocs((rows) =>
+                          rows.map((r, i) =>
+                            i === index ? { ...r, file } : r,
+                          ),
+                        );
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="text-sm text-red-700"
+                      onClick={() => {
+                        dirty.current = true;
+                        setReviewing(false);
+                        setDocs((rows) => rows.filter((_, i) => i !== index));
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  {doc.file && <Preview file={doc.file} />}
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="btn-secondary mt-4"
+              disabled={docs.length >= 10}
+              onClick={() =>
+                setDocs((rows) => [
+                  ...rows,
+                  {
+                    category:
+                      values.customerType === "COMMERCIAL" &&
+                      !rows.some((r) => r.category === "GST_CERTIFICATE")
+                        ? "GST_CERTIFICATE"
+                        : "OTHER",
+                    file: null,
+                  },
+                ])
+              }
+            >
+              + Add document
+            </button>
+          </Section>
+          <Section title="Declaration and review">
+            {input("remarks", "Remarks", "text", 1000)}
+            <label className="mt-4 flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={values.declarationAccepted === true}
+                onChange={(e) =>
+                  patch({ declarationAccepted: e.target.checked })
+                }
+              />
+              <span>
+                I confirm that I have checked the entered details and attached
+                evidence and am submitting this CAF for administrative review.
+              </span>
+            </label>
+            <p className="mt-2 text-xs text-slate-500">
+              Staff acknowledgement only. Customer signing workflow is planned
+              separately.
+            </p>
+          </Section>
+        </fieldset>
+        {notice && (
+          <div
+            role="status"
+            className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900"
           >
-            + Add another document
-          </button>
-        </section>
-
-        {error && (
-          <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+            {notice}
+          </div>
         )}
-
-        <div className="flex items-center gap-3">
-          <button type="submit" disabled={submitting} className="btn-primary">
-            {submitting ? "Submitting…" : "Submit CAF"}
+        {Object.keys(errors).length > 0 && (
+          <div
+            role="alert"
+            className="rounded-lg bg-red-50 p-4 text-sm text-red-800"
+          >
+            <p className="font-medium">Please check:</p>
+            <ul className="mt-2 list-disc pl-5">
+              {Object.entries(errors).map(([key, messages]) => (
+                <li key={key}>
+                  {key}: {messages?.join("; ")}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {reviewing && (
+          <section className="card border-blue-200 p-5">
+            <h2 className="font-semibold">Review before submitting</h2>
+            <dl className="mt-4 grid gap-4 text-sm md:grid-cols-2">
+              {Object.entries(payload())
+                .filter(
+                  ([k, v]) =>
+                    typeof v === "string" &&
+                    v &&
+                    !["draftId", "applicationId", "franchiseId"].includes(k),
+                )
+                .map(([k, v]) => (
+                  <div key={k}>
+                    <dt className="font-medium text-slate-500">
+                      {k.replace(/([A-Z])/g, " $1")}
+                    </dt>
+                    <dd className="break-words">{String(v)}</dd>
+                  </div>
+                ))}
+              <div>
+                <dt className="font-medium text-slate-500">
+                  Username suggestion
+                </dt>
+                <dd>{username || "Assigned on submission"}</dd>
+              </div>
+              <div>
+                <dt className="font-medium text-slate-500">New documents</dt>
+                <dd>
+                  {docs
+                    .filter((d) => d.file)
+                    .map((d) => d.file?.name)
+                    .join(", ")}
+                </dd>
+              </div>
+            </dl>
+            <button
+              type="button"
+              className="btn-primary mt-5"
+              disabled={busy}
+              onClick={submit}
+            >
+              {busy
+                ? "Submitting…"
+                : applicationId
+                  ? "Resubmit for approval"
+                  : "Submit for approval"}
+            </button>
+          </section>
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {!applicationId && (
+            <button
+              type="button"
+              disabled={busy || !values.franchiseId}
+              className="btn-secondary"
+              onClick={saveDraft}
+            >
+              {busy ? "Please wait…" : "Save draft"}
+            </button>
+          )}
+          <button type="submit" disabled={busy} className="btn-primary">
+            Review application
           </button>
-          <button type="button" onClick={() => router.back()} className="btn-secondary" disabled={submitting}>
-            Cancel
-          </button>
+          <Link href="/customers" className="btn-secondary">
+            Back to CAFs
+          </Link>
+          {savedAt && (
+            <span className="text-xs text-slate-500">
+              Draft saved: {savedAt}
+            </span>
+          )}
         </div>
+        {!applicationId && (
+          <p className="text-xs text-slate-500">
+            Drafts save form fields to the server, not selected files. Attach
+            documents before submission.
+          </p>
+        )}
       </form>
     </div>
   );
