@@ -1,7 +1,8 @@
 node_modules
 .next
 .git
-storage
+/storage/
+*.bak
 *.log
 .env
 .env.*

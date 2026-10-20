@@ -2,7 +2,8 @@ node_modules
 .next
 out
 build
-storage
+/storage/
+*.bak
 *.log
 .env
 .env.local
