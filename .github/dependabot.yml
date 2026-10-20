@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Track Node.js (TypeScript/JavaScript) packages
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+
+  # Track GitHub Actions used in your workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
