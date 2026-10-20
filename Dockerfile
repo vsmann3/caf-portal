@@ -1,19 +1,33 @@
+# ---- shared native runtime requirements ----
+FROM node:22-alpine AS base
+RUN apk add --no-cache openssl
+
 # ---- deps ----
-FROM node:22-alpine AS deps
+FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --no-audit --no-fund
 
+# Keep the complete locked production dependency graph, including the Prisma CLI
+# and its engines. Do not rely on Next.js tracing a CLI it never imports.
+FROM base AS production-deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN PRISMA_SKIP_POSTINSTALL_GENERATE=true npm ci --omit=dev --omit=peer --no-audit --no-fund
+
 # ---- build ----
-FROM node:22-alpine AS builder
+FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN mkdir -p public && npx prisma generate && npm run build
+RUN mkdir -p public && node node_modules/prisma/build/index.js generate && npm run build
+# The runner gets its production tree below; discard redundant traced copies
+# instead of merging any extra traced dependencies back into that tree.
+RUN rm -rf .next/standalone/node_modules
 
 # ---- run ----
-FROM node:22-alpine AS runner
+FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -22,9 +36,9 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
+COPY --from=production-deps /app/node_modules ./node_modules
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/prisma ./prisma
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x docker-entrypoint.sh && mkdir -p /app/storage && chown -R appuser:appgroup /app/storage
