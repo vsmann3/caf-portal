@@ -9,7 +9,7 @@ trap 'exit 1' HUP INT TERM
 docker run -d --name "$db" --network none --tmpfs /var/lib/postgresql/data \
   -e POSTGRES_USER=smoke -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=smoke postgres:16-alpine >/dev/null
 attempt=0
-until docker exec "$db" pg_isready -U smoke -d smoke >/dev/null 2>&1; do
+until docker exec "$db" pg_isready -h 127.0.0.1 -U smoke -d smoke >/dev/null 2>&1; do
   attempt=$((attempt + 1)); if [ "$attempt" -ge 60 ]; then exit 1; fi
   sleep 1
 done
@@ -43,3 +43,13 @@ SQL
 sql < prisma/migrations/20261021200000_staff_profiles/migration.sql >/dev/null
 test "$(sql -Atc 'SELECT COUNT(*) FROM "User" WHERE id = '\''legacy-staff'\'' AND email = '\''legacy-staff@example.test'\'' AND "passwordHash" = '\''preserve-legacy-password-hash'\'' AND "sessionVersion" = 0 AND "emailVerifiedAt" IS NULL')" = 1
 echo 'PASS: staff profile migration preserves existing staff email/password hash, defaults session version to zero and leaves email unverified.'
+sql <<'SQL' >/dev/null
+INSERT INTO "CafDraft" (id,"ownerId","companyId","franchiseId",payload,"updatedAt") VALUES ('legacy-draft','legacy-staff','c','f1','{"customerName":"Draft before Customer IDs"}',NOW());
+UPDATE "CustomerApplication" SET "approvedSnapshot" = '{"marker":"preserve-reviewed-fields"}' WHERE id = 'a1';
+SQL
+sql < prisma/migrations/20261022090000_customer_ids/migration.sql >/dev/null
+test "$(sql -Atc 'SELECT COUNT(*) FROM "CustomerApplication" WHERE "customerId" ~ '\''^[1-9][0-9]{9}$'\''')" = 2
+test "$(sql -Atc 'SELECT COUNT(*) FROM "CafDraft" WHERE "customerId" ~ '\''^[1-9][0-9]{9}$'\''')" = 1
+test "$(sql -Atc 'SELECT COUNT(*) FROM "CustomerNumber"')" = 3
+test "$(sql -Atc 'SELECT COUNT(*) FROM "CustomerApplication" WHERE id = '\''a1'\'' AND "approvedSnapshot"->>'\''marker'\'' = '\''preserve-reviewed-fields'\'' AND "approvedSnapshot"->>'\''customerId'\'' = "customerId"')" = 1
+echo 'PASS: Customer IDs backfilled on existing CAFs/drafts, approved snapshot retained, unique registry and legacy document references preserved.'

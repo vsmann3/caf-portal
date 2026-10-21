@@ -207,6 +207,48 @@ review/correction. `test-caf-browser.cjs` accepts a temporary Playwright module
 path, an SSH-forwarded isolated URL and an artifact directory, and uses installed
 Chrome for desktop/mobile form checks. Its fixture credentials are test-only.
 
+## Customer IDs and approved CAF PDFs
+
+Every saved draft and submitted CAF receives an automatic **10-digit Customer ID**.
+A PostgreSQL sequence and unique registry allocate IDs globally across companies
+and franchises. The ID transfers from draft to submission and remains unchanged
+on correction. It is separate from the CAF number and company-scoped username;
+staff cannot choose it. Numbers are never recycled, gaps are normal, and sequence
+exhaustion stops allocation rather than wrapping. This identifies a CAF, not yet
+a shared subscriber account across multiple CAFs.
+
+The additive `20261022090000_customer_ids` migration assigns IDs to existing
+CAFs/drafts and adds the ID to existing approval snapshots without replacing
+reviewed fields. Existing document files and references remain unchanged.
+
+Open an **approved** CAF and select **Download CAF + documents PDF**. The single
+file includes the approved form, an evidence manifest, all JPEG/PNG/WebP images
+and every page of PDF attachments. Existing company/franchise access restrictions
+also protect exports. New uploads receive SHA-256 hashes, checked during export;
+historical files without recorded hashes are labelled with a hash measured at
+export. Downloads are audited and sent with private, no-store headers.
+
+Exports use frozen approval data. A historical approved CAF without a snapshot
+receives a clearly labelled snapshot of its current approved record at first
+export. Missing, changed, encrypted, damaged or unsupported files cause an error
+instead of a partial PDF. Limits are 128 MiB input/output, 500 pages, 40 megapixels
+per decoded image and two concurrent exports per server process. Images are
+oriented and fitted within the page. Bundled Noto fonts support Latin/Devanagari;
+unsupported characters are shown as explicit Unicode codes.
+
+These PDFs contain document copies, not a new customer signature or government
+certification. Validate electronic signatures/forms against stored originals.
+Surepass XML/provider verification, customer signing and export packages retaining
+original files remain future work. Local storage remains the current choice.
+
+Deploy using `git pull --ff-only origin main` and
+`docker compose up -d --build --no-deps app`, with `RUN_SEED=0`. Startup applies
+the migration; do not reset the database or replace `.env`. The isolated settings
+harness now also runs `scripts/test-caf-pdf.cjs` for IDs and combined exports.
+`scripts/test-caf-pdf-browser.cjs` accepts a temporary Playwright module path,
+an isolated localhost URL, the integration fixture JSON and an artifact directory
+to verify the real download button and Customer ID search in Chrome.
+
 ## Staff Profile Settings
 
 Every staff account (Super Admin, Company Admin/owner and Franchise User/owner)

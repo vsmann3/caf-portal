@@ -35,6 +35,7 @@ export default async function CustomersPage({
       { customerName: { contains: q, mode: "insensitive" } },
       { mobile: { contains: q } },
       { cafNumber: { contains: q, mode: "insensitive" } },
+      { customerId: { contains: q } },
       { idNumber: { contains: q, mode: "insensitive" } },
     ];
   }
@@ -93,7 +94,7 @@ export default async function CustomersPage({
             id="q"
             name="q"
             defaultValue={q}
-            placeholder="Name, mobile, CAF number, ID number…"
+            placeholder="Name, mobile, Customer ID, CAF or ID number…"
             className="field-input"
           />
         </div>
@@ -137,6 +138,7 @@ export default async function CustomersPage({
               <tr>
                 <th className="table-th">CAF No.</th>
                 <th className="table-th">Customer</th>
+                <th className="table-th">Customer ID</th>
                 <th className="table-th">Mobile</th>
                 <th className="table-th">City</th>
                 {canFilterFranchise && <th className="table-th">Franchise</th>}
@@ -158,6 +160,7 @@ export default async function CustomersPage({
                     </Link>
                   </td>
                   <td className="table-td font-medium text-slate-900">{app.customerName}</td>
+                  <td className="table-td font-mono">{app.customerId}</td>
                   <td className="table-td">{app.mobile}</td>
                   <td className="table-td">{app.city}</td>
                   {canFilterFranchise && <td className="table-td">{app.franchise.name}</td>}

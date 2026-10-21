@@ -189,6 +189,8 @@ model StaffSecurityLimit {
 // ---------------------------------------------------------------------------
 
 model CustomerApplication {
+  customerId String @unique
+  customerNumber CustomerNumber @relation(fields: [customerId], references: [id])
   id         String    @id @default(cuid())
   cafNumber  String    @unique // e.g. INFOBB2548-CAF-000001
   companyId  String
@@ -265,6 +267,8 @@ model CustomerApplication {
 
 // Partial CAF fields live separately so drafts need no fake customer/ID values.
 model CafDraft {
+  customerId String @unique
+  customerNumber CustomerNumber @relation(fields: [customerId], references: [id])
   id String @id @default(cuid())
   ownerId String
   companyId String
@@ -276,7 +280,15 @@ model CafDraft {
   @@index([ownerId])
 }
 
+// Sequence-backed registry shared by drafts and submitted CAFs. Numbers never recycle.
+model CustomerNumber {
+  id String @id @default(dbgenerated("nextval('customer_id_sequence'::regclass)::text"))
+  application CustomerApplication?
+  draft CafDraft?
+}
+
 model Document {
+  sha256          String?
   id              String       @id @default(cuid())
   applicationId   String
   documentType    DocumentType

@@ -497,6 +497,7 @@ async function main() {
   );
   assert.equal(result.status, 200, JSON.stringify(result.body));
   assert.equal(result.body.application.revision, 2);
+  assert.equal(result.body.application.customerId, first.customerId);
   assert.equal(
     result.body.application.broadbandUsername,
     first.broadbandUsername,

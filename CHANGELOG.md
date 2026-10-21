@@ -1,5 +1,15 @@
 # Change log
 
+## 2026-10-21: global Customer IDs and approved CAF PDF exports
+
+- Assign every saved draft/submitted CAF an automatic, globally unique 10-digit Customer ID using a non-cycling PostgreSQL sequence and registry. Preserve IDs through draft submission and rejected-CAF correction; reject client overrides. Backfill existing CAFs/drafts and add IDs to existing approval snapshots without replacing reviewed data.
+- Display/search Customer IDs on CAF/customer pages. Offer **Download CAF + documents PDF** only on approved CAFs, protected by existing staff company/franchise access rules.
+- Build one PDF from the frozen approval snapshot, supporting image evidence and all pages of PDF attachments. Bundle licensed Noto Latin/Devanagari fonts into the production image. Explicitly label historical snapshots captured at first export and document copies that require originals for signature/form validation.
+- Hash new uploads with SHA-256 and check integrity at export. Fail clearly on missing/changed/damaged/encrypted/unsupported evidence rather than delivering an incomplete file. Audit exports, prevent caching and limit concurrent export work and document size/page counts.
+- Add concurrent-ID, draft transfer, approval/scoping, evidence-format, snapshot and failure-path integration checks; additive upgrade assertions and a real Chrome download check. Wait for the final PostgreSQL TCP listener in disposable harnesses to avoid catching its temporary initialization server.
+
+Validation: production Docker image `caf-pdf:release` built successfully with TypeScript checks. All six local startup/dependency-preservation tests and Prisma schema validation passed. Disposable PostgreSQL upgrades backfilled existing CAF/draft IDs while preserving reviewed snapshot fields, staff credentials and historical document references. Real HTTP integration passed 24 concurrent draft allocations across companies, stable draft/correction IDs, client override rejection, database constraints, approved-only tenant-scoped exports, frozen snapshot data, JPEG/PNG/WebP and multipage PDF evidence, integrity/missing/corrupt-file failures, legacy snapshots and audit entries. Existing CAF, SMTP and staff profile suites passed. Chrome downloaded the combined PDF from the CAF button with the correct filename and found the record by Customer ID; desktop/mobile screenshots were inspected. All nine pages of the actual-container test PDF were rendered and reviewed, including Hindi text and both source PDF pages; text checks confirmed attachment names, frozen data and preservation of the legacy additional address. Offline runtime Prisma/client 6.19.3 checks, migration-failure exit, seeded login/dashboard and HTTP startup smoke passed. No production database, uploaded files or environment configuration was changed.
+
 ## 2026-10-21: staff Profile Settings
 
 - Add Profile Settings for every existing staff role (Super Admin, Company Admin and Franchise User), including owners using those roles. Keep customer onboarding/contact verification separate.

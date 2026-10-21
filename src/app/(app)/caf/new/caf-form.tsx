@@ -16,6 +16,7 @@ export interface FranchiseOption {
 type Values = Record<string, string | boolean>;
 type SavedDocument = { id: string; documentType: string; originalName: string };
 type Draft = {
+  customerId: string;
   id: string;
   version: number;
   payload: Values;
@@ -109,6 +110,7 @@ export function CafForm({
     null,
   );
   const [savedAt, setSavedAt] = useState("");
+  const [customerId, setCustomerId] = useState(String(initial?.customerId ?? ""));
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>(
@@ -272,6 +274,7 @@ export function CafForm({
       const d = await r.json();
       if (!r.ok) throw new Error(d.error ?? "Draft save failed");
       setDraft({ id: d.draft.id, version: d.draft.version });
+      setCustomerId(d.draft.customerId);
       setSavedAt(new Date(d.draft.updatedAt).toLocaleString());
       dirty.current = docs.some((d) => d.file);
       setNotice(
@@ -368,6 +371,7 @@ export function CafForm({
         }
         subtitle="Save your progress, attach evidence and review before submitting for approval."
       />
+      <p className="mb-5 text-sm text-slate-600">Customer ID: <strong className="font-mono">{customerId || "Assigned automatically on first save"}</strong></p>
       {!applicationId && drafts.length > 0 && (
         <div className="card mb-5 p-5">
           <label className="field-label" htmlFor="resume">
@@ -389,6 +393,7 @@ export function CafForm({
                 return;
               setValues({ ...d.payload, declarationAccepted: false });
               setDraft({ id: d.id, version: d.version });
+              setCustomerId(d.customerId);
               setDocs([]);
               setSavedAt(new Date(d.updatedAt).toLocaleString());
               setErrors({});

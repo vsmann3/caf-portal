@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
       { customerName: { contains: q, mode: "insensitive" } },
       { mobile: { contains: q } },
       { cafNumber: { contains: q, mode: "insensitive" } },
+      { customerId: { contains: q } },
       { idNumber: { contains: q, mode: "insensitive" } },
     ];
   }

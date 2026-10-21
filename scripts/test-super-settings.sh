@@ -27,7 +27,7 @@ docker run -d --name "$mail" --network "$network" --network-alias mail \
   --mount "type=bind,src=$PWD/scripts/test-smtp-server.cjs,dst=/fixture.cjs,readonly" \
   node:22-alpine node /fixture.cjs >/dev/null
 attempt=0
-until docker exec "$db" pg_isready -U smoke -d smoke >/dev/null 2>&1; do
+until docker exec "$db" pg_isready -h 127.0.0.1 -U smoke -d smoke >/dev/null 2>&1; do
   attempt=$((attempt + 1)); if [ "$attempt" -ge 60 ]; then docker logs "$db"; exit 1; fi
   sleep 1
 done
@@ -46,6 +46,7 @@ done
 docker exec -i "$app" node < scripts/test-super-settings.cjs
 docker exec -i "$app" node < scripts/test-caf.cjs
 docker exec -i "$app" node < scripts/test-profile.cjs
+docker exec -i "$app" node < scripts/test-caf-pdf.cjs
 passed=1
 printf 'TEST_APP=%s\nTEST_DB=%s\nTEST_MAIL=%s\nTEST_NETWORK=%s\nTEST_PORT=%s\nTEST_IMAGE=%s\n' "$app" "$db" "$mail" "$network" "$port" "$image" > test-fixture.env
 echo "PASS: settings and SMTP integration. Test port: $port"

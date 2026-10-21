@@ -244,8 +244,8 @@ The first CAF redesign is implemented for testing. This supersedes the earlier
 - Rejected-CAF correction/resubmission, stable identifiers, revision/history recording, original-file retention and atomic final review. New approvals retain a snapshot for the later export implementation; previously approved CAFs are not retrospectively snapshotted.
 - Interim acknowledgement by the submitting staff member. This is not customer consent/signature evidence and does not resolve the future signing decision.
 
-**Still retained for future updates:** customer signing and approved PDF/evidence
-downloads; Surepass identity/GST verification; mobile/email verification; S3
+**Still retained for future updates:** customer signing (approved PDF/evidence
+downloads are implemented below); Surepass identity/GST verification; mobile/email verification; S3
 migration; real RADIUS API mapping/provisioning; the deferred Storage Settings
 404; reviewer assignment and a dedicated history viewer; separate identity/permanent
 address requirements; draft attachments, autosave and draft deletion/retention;
@@ -272,3 +272,23 @@ claim identity/document verification. Existing staff may continue logging in
 without a forced verification rollout. Recovery without the current password,
 administrator MFA, customer verification and security notifications to the old
 mailbox remain possible future additions, not completed features.
+
+## Customer IDs and approved PDF exports - 2026-10-21
+
+Implemented: automatic, globally unique 10-digit Customer IDs for saved CAFs and
+drafts, including existing records. IDs remain stable through draft submission
+and corrections, across every company and franchise. PostgreSQL sequence
+allocation does not cycle or recycle numbers. A Customer ID currently identifies
+a CAF; linking multiple CAFs to one subscriber remains a separate future decision.
+
+Approved CAF pages offer one PDF containing the frozen approval data and every
+attached image/PDF page. Access follows existing company/franchise restrictions.
+New upload hashes detect changed evidence; unreadable/missing attachments stop
+the export rather than silently omitting evidence. Older approved records without
+snapshots are explicitly labelled when captured at first export. Document copies
+do not replace electronically signed originals or prove customer consent.
+
+Retained for future work: Surepass identity/GST APIs and original XML, customer
+mobile/email verification, customer signing, original-file ZIP/evidence packages,
+broader Indian-script fonts, and S3 migration. Existing local storage is retained.
+See README for supported formats and export limits.

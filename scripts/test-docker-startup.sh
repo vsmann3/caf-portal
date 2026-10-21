@@ -72,7 +72,7 @@ docker run -d --name "$db" --network "$network" \
   -e POSTGRES_USER=smoke -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=smoke \
   postgres:16-alpine >/dev/null
 attempt=0
-until docker exec "$db" pg_isready -U smoke -d smoke >/dev/null 2>&1; do
+until docker exec "$db" pg_isready -h 127.0.0.1 -U smoke -d smoke >/dev/null 2>&1; do
   attempt=$((attempt + 1))
   if [ "$attempt" -ge 60 ]; then docker logs "$db"; exit 1; fi
   sleep 1

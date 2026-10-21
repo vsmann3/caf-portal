@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       companyId: franchise.companyId,
       franchiseId: franchise.id,
       payload,
+      customerNumber: { create: {} },
     },
   });
   return NextResponse.json({ draft }, { status: 201 });

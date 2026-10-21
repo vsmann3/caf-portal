@@ -1,7 +1,7 @@
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { Prisma, type DocumentType } from "@prisma/client";
-import { randomBytes } from "crypto";
+import { randomBytes, createHash } from "crypto";
 import { prisma } from "@/lib/db";
 import { requireRole, jsonError, ApiError } from "@/lib/guard";
 import { createApplicationSchema } from "@/lib/validators";
@@ -152,12 +152,22 @@ export async function saveApplication(request: NextRequest) {
   if (retained.length + uploads.length > 10)
     return jsonError(400, "Maximum 10 documents per CAF");
   const provider = await getActiveProvider();
-  const saved: { key: string; file: File; category: DocumentType }[] = [];
+  const saved: {
+    key: string;
+    file: File;
+    category: DocumentType;
+    sha256: string;
+  }[] = [];
   try {
     for (const upload of uploads) {
       const key = `${franchise.company.companyCode}/${new Date().getFullYear()}/${randomBytes(16).toString("hex")}.${types[upload.file.type]}`;
       // Register before save so a partial write is also eligible for cleanup.
-      saved.push({ key, file: upload.file, category: upload.category });
+      saved.push({
+        key,
+        file: upload.file,
+        category: upload.category,
+        sha256: createHash("sha256").update(upload.buffer).digest("hex"),
+      });
       await provider.save(key, upload.buffer, upload.file.type);
     }
     const application = await prisma.$transaction(
@@ -260,9 +270,29 @@ export async function saveApplication(request: NextRequest) {
             where: { id: previous.id },
           });
         } else {
+          const draft = data.draftId
+            ? await tx.cafDraft.findFirst({
+                where: {
+                  id: data.draftId,
+                  ownerId: auth.userId,
+                  version: data.draftVersion ?? -1,
+                  companyId: franchise.companyId,
+                  franchiseId: franchise.id,
+                },
+              })
+            : null;
+          if (data.draftId && !draft)
+            throw new ApiError(
+              409,
+              "Draft changed or was already submitted. Reload before submitting.",
+            );
+          const customerId =
+            draft?.customerId ??
+            (await tx.customerNumber.create({ data: {} })).id;
           app = await tx.customerApplication.create({
             data: {
               ...fields,
+              customerId,
               cafNumber: cafNumber(
                 franchise.company.companyCode,
                 sequence.value,
@@ -281,6 +311,7 @@ export async function saveApplication(request: NextRequest) {
               originalName: upload.file.name,
               mimeType: upload.file.type,
               sizeBytes: upload.file.size,
+              sha256: upload.sha256,
               storageProvider: provider.name,
               storageKey: upload.key,
             },

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { PageHeader, StatusBadge } from "@/components/ui";
 import { ReviewActions } from "@/components/review-actions";
+import { DownloadCafPdf } from "@/components/download-caf-pdf";
 
 function Field({ label, value }: { label: string; value?: string | number | null }) {
   return (
@@ -59,8 +60,9 @@ export default async function CustomerDetailPage({
         title={app.customerName}
         subtitle={`${app.cafNumber} · ${app.company.name} · ${app.franchise.name}`}
         action={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={app.status} />
+            {app.status === "APPROVED" && <DownloadCafPdf id={app.id} customerId={app.customerId} />}
             {app.status === "REJECTED" && <Link href={`/customers/${app.id}/edit`} className="btn-primary">Correct and resubmit</Link>}
             <Link href="/customers" className="btn-secondary">← Back</Link>
           </div>
@@ -70,6 +72,7 @@ export default async function CustomerDetailPage({
       <div className="grid gap-5 lg:grid-cols-2">
         <Section title="Applicant">
           <dl className="grid grid-cols-2 gap-4">
+            <Field label="Customer ID" value={app.customerId} />
             <Field label="Full Name" value={app.customerName} />
             <Field label="Gender" value={app.gender} />
             <Field
