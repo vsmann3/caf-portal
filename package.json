@@ -27,7 +27,7 @@
     "next": "^15.0.0",
     "nodemailer": "^10.1.7",
     "pdf-lib": "1.17.1",
-    "prisma": "^6.0.0",
+    "prisma": "^7.10.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "regenerator-runtime": "0.14.1",
