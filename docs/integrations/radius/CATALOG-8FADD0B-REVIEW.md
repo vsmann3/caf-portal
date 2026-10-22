@@ -124,3 +124,35 @@ CI success does not establish the missing trailing-space regression or live CAF
 acceptance. Peer reports proposal-bundle hashes/path confinement verified; CAF has
 not independently repeated that hash audit in this review. No runtime CAF client,
 production deployment or activation was added.
+
+## P2 resolved: exact byte comparison and observed MariaDB evidence
+
+The above P2 is **resolved** for the catalog source and tested SQL path.
+The runtime fix is `e9d0e9ba5240e0b5657775379bad26d40f8c10d7`: both published and
+current name expressions use complete binary-string casts before keyset/LIMIT.
+The regression covers case-only and one/two trailing-space changes, stale records
+before/between/after eligible records, cursor boundaries and republish increments.
+No post-page filtering or response schema change is involved.
+
+Follow-up `5be76a68f94500869bf2818c36ede70436f38c3e` changes only the SQL harness
+to require exactly one bounded regression marker and expose that line. CAF checked
+[CI run 39736244452](https://github.com/vsmann3/Netloom-Radius/actions/runs/39736244452)
+head SHA equals that full follow-up SHA; Application checks and MariaDB/FreeRADIUS
+integration jobs both completed successfully. CAF independently read SQL job
+`119682565681` and observed the exact marker:
+
+```text
+CAF catalog exact-name SQL regression PASS: collation=utf8mb4_uca1400_ai_ci; case/trailing spaces, pagination and republish versions
+```
+
+The same job reports Django isolation against MariaDB and stock FreeRADIUS PAP/
+plan-attribute checks passing. This is independently observed peer CI evidence,
+not a new locally rerun CAF runtime test. The peer's local 68 tests (62 pass,
+6 SQL-specific skips) remain peer-reported; SQL CI supplies the database-path
+verification that the earlier local skip result could not establish.
+
+No additional catalog compatibility concern is identified by this review.
+Absent price still means unavailable; explicit versioned publication is required.
+This closes the exact-name P2, not live CAF acceptance, deployment authorization,
+production-promotion policy or the separate lifecycle/KYC product decisions.
+No CAF client, reservations, provisioning or activation is enabled by this review.
