@@ -7,6 +7,7 @@ import {
   radiusBlockedResult,
   buildRadiusApprovalReference,
 } from "@/lib/radius";
+import { recordDemoApproval } from "@/lib/radius-demo/approval";
 import { applicationScope } from "@/lib/caf-access";
 
 type Params = { params: Promise<{ id: string }> };
@@ -41,6 +42,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     },
   });
   if (!existing) return jsonError(404, "Application not found");
+  if (!existing.company.isActive || !existing.franchise.isActive) return jsonError(409, "Company and franchise must be active before review");
   if (existing.status !== "SUBMITTED" && existing.status !== "UNDER_REVIEW") {
     return jsonError(409, "Only submitted applications can be reviewed");
   }
@@ -84,6 +86,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         where: { id },
       });
       if (action === "APPROVE") {
+        await recordDemoApproval(tx, approved);
         const setting = await tx.systemSetting.findUnique({
           where: { key: "radius.config" },
         });

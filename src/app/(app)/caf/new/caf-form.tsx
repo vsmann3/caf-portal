@@ -2,6 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  RadiusDemoFields,
+  type DemoPlan,
+} from "@/components/radius-demo-fields";
 import { PageHeader } from "@/components/ui";
 import { CafAddressFields, type CafAddress } from "@/components/caf-address";
 import { DOCUMENT_OPTIONS, MAX_DOCUMENT_BYTES } from "@/lib/caf-fields";
@@ -81,6 +85,7 @@ export function CafForm({
   initialDocuments = [],
   applicationId,
   revision,
+  returnTo,
 }: {
   franchises: FranchiseOption[];
   lockedFranchiseId: string | null;
@@ -88,6 +93,7 @@ export function CafForm({
   initialDocuments?: SavedDocument[];
   applicationId?: string;
   revision?: number;
+  returnTo?: string;
 }) {
   const router = useRouter();
   const [values, setValues] = useState<Values>({
@@ -110,7 +116,9 @@ export function CafForm({
     null,
   );
   const [savedAt, setSavedAt] = useState("");
-  const [customerId, setCustomerId] = useState(String(initial?.customerId ?? ""));
+  const [customerId, setCustomerId] = useState(
+    String(initial?.customerId ?? ""),
+  );
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>(
@@ -142,6 +150,11 @@ export function CafForm({
     return () => window.removeEventListener("beforeunload", warn);
   }, []);
   useEffect(() => {
+    if (values.radiusDemoIntentId && values.broadbandUsername) {
+      setUsername(String(values.broadbandUsername));
+      setUsernameMessage("RADIUS reservation retained");
+      return;
+    }
     if (applicationId && initial?.broadbandUsername) {
       setUsername(String(initial.broadbandUsername));
       setUsernameMessage("Existing username retained");
@@ -190,6 +203,8 @@ export function CafForm({
     values.franchiseId,
     applicationId,
     initial,
+    values.radiusDemoIntentId,
+    values.broadbandUsername,
   ]);
   function setAddress(v: CafAddress, billing: boolean) {
     patch(
@@ -281,8 +296,75 @@ export function CafForm({
         "Draft fields saved. Selected files are not saved in drafts; attach them before submission.",
       );
       refreshDrafts();
+      return d.draft as Draft;
     } catch (e) {
       setNotice(e instanceof Error ? e.message : "Draft save failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function reserveRadius(plan: DemoPlan, name: string, existing: string) {
+    const saved = await saveDraft();
+    if (!saved) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/radius-demo/intents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          draftId: saved.id,
+          draftVersion: saved.version,
+          planId: plan.plan_id,
+          planVersion: plan.version,
+          username: name,
+          ...(existing ? { existingCustomerId: existing } : {}),
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok)
+        throw new Error(
+          d.error ?? "Reservation outcome unknown; retry the same selection",
+        );
+      setDraft({ id: d.draft.id, version: d.draft.version });
+      setCustomerId(d.intent.customerId);
+      setValues((v) => ({
+        ...v,
+        radiusDemoIntentId: d.intent.id,
+        broadbandUsername: d.intent.username,
+        planName: plan.name,
+        bandwidth: String(plan.download_kbps),
+      }));
+      setUsername(d.intent.username);
+      setNotice(
+        "RADIUS username reserved. Submit this CAF before the reservation expires. Approval will stage a disabled service.",
+      );
+    } catch (e) {
+      setNotice(
+        e instanceof Error ? e.message : "Reservation could not be confirmed",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function renewRadius() {
+    setBusy(true);
+    try {
+      const r = await fetch("/api/radius-demo/renew", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intentId: values.radiusDemoIntentId }),
+      });
+      const d = await r.json();
+      if (!r.ok)
+        throw new Error(d.error ?? "Renewal outcome unknown; retry renewal");
+      setNotice(
+        "Reservation renewed. Submit before " +
+          new Date(d.intent.reservationExpiresAt).toLocaleString(),
+      );
+    } catch (e) {
+      setNotice(
+        e instanceof Error ? e.message : "Renewal could not be confirmed",
+      );
     } finally {
       setBusy(false);
     }
@@ -308,7 +390,7 @@ export function CafForm({
         throw new Error(d.error ?? "CAF submission failed");
       }
       dirty.current = false;
-      router.push(`/customers/${d.application.id}`);
+      router.push(`/customers/${d.application.id}${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`);
       router.refresh();
     } catch (e) {
       setNotice(
@@ -332,6 +414,7 @@ export function CafForm({
       </label>
       <input
         id={key}
+        disabled={!!values.radiusDemoIntentId && ["planName", "bandwidth"].includes(key)}
         type={type}
         maxLength={maxLength}
         className="field-input"
@@ -371,7 +454,12 @@ export function CafForm({
         }
         subtitle="Save your progress, attach evidence and review before submitting for approval."
       />
-      <p className="mb-5 text-sm text-slate-600">Customer ID: <strong className="font-mono">{customerId || "Assigned automatically on first save"}</strong></p>
+      <p className="mb-5 text-sm text-slate-600">
+        Customer ID:{" "}
+        <strong className="font-mono">
+          {customerId || "Assigned automatically on first save"}
+        </strong>
+      </p>
       {!applicationId && drafts.length > 0 && (
         <div className="card mb-5 p-5">
           <label className="field-label" htmlFor="resume">
@@ -428,14 +516,19 @@ export function CafForm({
                 </label>
                 <select
                   id="franchiseId"
-                  disabled={!!lockedFranchiseId || !!applicationId}
+                  disabled={
+                    !!lockedFranchiseId ||
+                    !!applicationId ||
+                    !!values.radiusDemoIntentId
+                  }
                   className="field-input"
                   value={String(values.franchiseId)}
                   onChange={(e) => patch({ franchiseId: e.target.value })}
                 >
                   {franchises.map((f) => (
                     <option key={f.id} value={f.id}>
-                      {f.companyName ? `${f.companyName} / ` : ""}{f.name} ({f.code})
+                      {f.companyName ? `${f.companyName} / ` : ""}
+                      {f.name} ({f.code})
                     </option>
                   ))}
                 </select>
@@ -513,7 +606,18 @@ export function CafForm({
                 onChange={(v) => setAddress(v, true)}
               />
             )}
-            <p className="mt-4 text-xs text-slate-500">Address reference data: <a className="underline" href="https://github.com/dr5hn/countries-states-cities-database" target="_blank" rel="noreferrer">CSC Database contributors (ODbL)</a>. Missing cities can be entered manually.</p>
+            <p className="mt-4 text-xs text-slate-500">
+              Address reference data:{" "}
+              <a
+                className="underline"
+                href="https://github.com/dr5hn/countries-states-cities-database"
+                target="_blank"
+                rel="noreferrer"
+              >
+                CSC Database contributors (ODbL)
+              </a>
+              . Missing cities can be entered manually.
+            </p>
           </Section>
           <Section title="Service details">
             <div className="grid gap-4 md:grid-cols-2">
@@ -537,6 +641,15 @@ export function CafForm({
               {input("bandwidth", "Bandwidth", "text", 50)}
             </div>
           </Section>
+          {!applicationId && (
+            <RadiusDemoFields
+              franchiseId={String(values.franchiseId)}
+              username={username}
+              reserved={!!values.radiusDemoIntentId}
+              onReserve={reserveRadius}
+              onRenew={renewRadius}
+            />
+          )}
           <Section title="Identity and supporting documents">
             <div className="mb-5 grid gap-4 md:grid-cols-2">
               {select("idProofType", "Identity document type *", [

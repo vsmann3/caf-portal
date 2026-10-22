@@ -110,6 +110,7 @@ export const createApplicationSchema = z.object({
   billingState: z.string().trim().min(2, "Billing state required").max(100),
   billingPincode: z.string().regex(/^[1-9]\d{5}$/, "Billing PIN must have 6 digits"),
   declarationAccepted: z.literal(true, { errorMap: () => ({ message: "Confirm the submission declaration" }) }),
+  radiusDemoIntentId: z.string().uuid().optional(),
   draftId: z.string().optional(),
   draftVersion: z.number().int().positive().optional(),
   applicationId: z.string().optional(),

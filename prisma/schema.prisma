@@ -189,7 +189,8 @@ model StaffSecurityLimit {
 // ---------------------------------------------------------------------------
 
 model CustomerApplication {
-  customerId String @unique
+  serviceRequestId String @unique @default(uuid()) @db.Uuid
+  customerId String
   customerNumber CustomerNumber @relation(fields: [customerId], references: [id])
   id         String    @id @default(cuid())
   cafNumber  String    @unique // e.g. INFOBB2548-CAF-000001
@@ -258,6 +259,7 @@ model CustomerApplication {
   documents Document[]
   radiusSyncs RadiusSync[]
 
+  @@index([customerId])
   @@index([companyId, franchiseId])
   @@index([status])
   @@index([mobile])
@@ -267,7 +269,7 @@ model CustomerApplication {
 
 // Partial CAF fields live separately so drafts need no fake customer/ID values.
 model CafDraft {
-  customerId String @unique
+  customerId String
   customerNumber CustomerNumber @relation(fields: [customerId], references: [id])
   id String @id @default(cuid())
   ownerId String
@@ -278,13 +280,19 @@ model CafDraft {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([ownerId])
+  @@index([customerId])
 }
 
 // Sequence-backed registry shared by drafts and submitted CAFs. Numbers never recycle.
 model CustomerNumber {
   id String @id @default(dbgenerated("nextval('customer_id_sequence'::regclass)::text"))
-  application CustomerApplication?
-  draft CafDraft?
+  companyId String?
+  franchiseId String?
+  profileVersion Int @default(0)
+  approvedProfile Json?
+  profileApprovedAt DateTime?
+  applications CustomerApplication[]
+  drafts CafDraft[]
 }
 
 model Document {
@@ -360,4 +368,69 @@ model AuditLog {
 
   @@index([createdAt])
   @@index([actorId])
+}
+
+// Opt-in isolated demo only. No real network activation authority is modeled here.
+model RadiusDemoBinding {
+  companyId String @id
+  sourceId String
+  baseUrl String
+  radiusCompanyId String
+  tokenEncrypted String
+  inboundTokenDigest String @unique
+  inboundExpiresAt DateTime
+  franchiseMappings Json
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+}
+model RadiusDemoIntent {
+  id String @id @default(uuid()) @db.Uuid
+  draftId String @unique
+  ownerId String
+  companyId String
+  franchiseId String
+  customerId String
+  username String
+  planId String @db.Uuid
+  planVersion Int
+  plan Json
+  reservation Json?
+  renewalKey String? @db.Uuid
+  reservationId String? @db.Uuid
+  reservationExpiresAt DateTime?
+  applicationId String? @unique
+  state String @default("RESERVING")
+  approvalVersion Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deliveries RadiusDemoDelivery[]
+  @@index([companyId, customerId])
+}
+model RadiusDemoDelivery {
+  id String @id @default(uuid()) @db.Uuid
+  eventId String @unique @db.Uuid
+  intentId String @db.Uuid
+  applicationId String
+  revision Int
+  approvalVersion Int
+  approvalEvent Json
+  service Json
+  secretEncrypted String?
+  secretExpiresAt DateTime
+  requestHmac String
+  receipt Json?
+  receiptVersion Int @default(0)
+  credentialAccepted Boolean @default(false)
+  serviceId String? @db.Uuid
+  state String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  leaseUntil DateTime?
+  leaseId String? @db.Uuid
+  errorCode String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  intent RadiusDemoIntent @relation(fields:[intentId], references:[id], onDelete:Restrict)
+  @@unique([applicationId, revision])
+  @@index([state, nextAttemptAt])
 }

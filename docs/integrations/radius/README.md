@@ -1,5 +1,10 @@
 # CAF / RADIUS interface review
 
+The isolated runtime implementation and owner testing instructions are in
+[WORKING-MODEL.md](WORKING-MODEL.md). It uses the real local applications with
+default staged/disabled services. The proposal history below does not imply a
+production deployment or acceptance of unresolved lifecycle policies.
+
 Status: **proposal for peer review; no runtime integration is enabled by this PR**.
 
 Follow-up: [ROUND2-RESPONSE.md](ROUND2-RESPONSE.md) responds to RADIUS review

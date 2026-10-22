@@ -62,3 +62,26 @@ The earlier wait no longer blocks this work. Report exact commits, compatibility
 impacts, validation and proposed next steps to the owner and peer on completion.
 Activation/withdrawal and later pending-KYC user-visible policies remain unresolved;
 do not enable unattended activation or silently choose either policy.
+
+
+## Owner authorization: isolated working integration model
+
+Vikas explicitly authorized completing the actual CAF form/client, scoped customer/
+approval APIs and durable approval worker for an isolated end-to-end CAF/RADIUS demo.
+This supersedes the earlier wait for that scope. Use isolated demo databases,
+companies and documents only; do not deploy to production or enable real traffic.
+Demo staging/receipt acceptance is distinct from activation. Any later demo-only
+activation needs explicit isolated semantics; withdrawal and later-KYC policies
+remain unresolved. Preserve existing work and coordinate concrete endpoints,
+fixtures, exact commits and tests with the existing RADIUS developer, who owns its
+runtime repository. Do not stop this authorized implementation at documentation.
+
+After each developed milestone, complete automated checks, then ask Vikas to test
+with the exact environment/URL, safe steps and expected results. Await his feedback
+before calling it owner accepted. Do not mistake CI success for deployed readiness.
+
+Vikas subsequently tested the local working model and explicitly authorized
+merging the tested CAF changes into GitHub main. The isolated STAGED milestone is
+owner accepted. This authorization supersedes the repository-merge wait only;
+production deployment/enablement and unresolved activation/withdrawal/later-KYC
+policies are separate work and must not be inferred from the main merge.

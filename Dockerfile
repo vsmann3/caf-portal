@@ -44,6 +44,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/assets/fonts ./assets/fonts
 COPY --from=builder /app/seed-runtime ./seed-runtime
+COPY scripts/configure-radius-demo.cjs scripts/radius-demo-worker.cjs ./scripts/
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x docker-entrypoint.sh && mkdir -p /app/storage /app/.next/cache && chown -R appuser:appgroup /app/storage /app/.next/cache
 

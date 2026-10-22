@@ -1,5 +1,12 @@
 # Change log
 
+## 2026-10-22: isolated CAF / RADIUS working model (not deployed)
+
+- Connect the existing CAF form to scoped published RADIUS plans and durable username reservations; preserve authoritative company/franchise scope and safe new-tab return links.
+- Add explicit additional connections under the same permanent 10-digit Customer ID, a distinct service UUID, scoped customer/exact-approval reads and an atomic approval delivery outbox.
+- Reconcile durable v2 receipts before retrying, validate nested bindings, encrypt initial credentials and purge them after acceptance or the absolute 24-hour deadline. Default result is STAGED/SUSPENDED; production activation and later KYC/withdrawal policies remain unresolved.
+- Provide repeatable isolated laptop preparation/start/stop, private demo login files, actual HTTP and Chrome tests, and an owner checklist in `docs/integrations/radius/WORKING-MODEL.md`. No production data, environment, service or traffic changed. Owner acceptance remains pending.
+
 ## 2026-10-22: RADIUS runtime safety (proposed; not deployed)
 
 - Remove fake `SKIPPED` provisioning success. Approval now atomically records a blocked, zero-attempt local RADIUS diagnostic with only Customer ID, organization IDs and the approved CAF reference. Original CAF/PDF proof data stays intact.
