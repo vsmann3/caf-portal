@@ -83,6 +83,16 @@ logs a fixture sync-insert error; the rollback and subsequent suites pass.
 
 ## Boundaries and next owner action
 
+The RADIUS developer independently reported a second real paired HTTP pass against
+CAF implementation `b9ad5b060633873226f907104876a873278ea014` and the existing
+18120/18130 backend/database: no subscriber before approval, counter approval403,
+company reviewer approval200, automatic accepted STAGED receipt, exactly one
+SUSPENDED subscriber with matching Customer ID/username/plan, unchanged credential
+hash/expiry after another worker scan, and successful scoped customer read.
+Peer evidence is the ignored RADIUS `.tools/integration-demo/joint-http-result.json`
+and consolidated `peer-status.json`. This paragraph attributes the independent
+execution to the peer; it is additional evidence, not owner acceptance.
+
 The default receipt is accepted but blocked pending activation authorization;
 RADIUS subscriber stays SUSPENDED. Production policy, deployment and owner
 acceptance are not implied by these tests. Follow [WORKING-MODEL.md](WORKING-MODEL.md)
