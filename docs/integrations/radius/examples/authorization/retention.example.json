@@ -1,0 +1,8 @@
+{
+  "username_hold_seconds": 900,
+  "snapshot_ttl_seconds": 86400,
+  "feed_retention_seconds": 2592000,
+  "credential_ciphertext_window_seconds": 86400,
+  "credential_deadline_anchor": "first_capture",
+  "extend_credential_deadline_on_retry": false
+}

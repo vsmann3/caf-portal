@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:netloom:ecaf:customer-approved:1.0",
+  "title": "Proposed CAF approved-customer event v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "event_type", "occurred_at", "customer_version", "customer_id", "company_ref", "franchise_ref", "caf", "profile"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "event_id": {"type": "string", "format": "uuid"},
+    "event_type": {"const": "customer.approved"},
+    "occurred_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "customer_version": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "customer_id": {"type": "string", "pattern": "^[1-9][0-9]{9}$"},
+    "company_ref": {"$ref": "#/$defs/reference"},
+    "franchise_ref": {"$ref": "#/$defs/reference"},
+    "caf": {
+      "type": "object", "additionalProperties": false,
+      "required": ["application_id", "number", "revision", "status", "approved_at"],
+      "properties": {
+        "application_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "number": {"type": "string", "minLength": 1, "maxLength": 128},
+        "revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "status": {"const": "APPROVED"},
+        "approved_at": {"type": "string", "format": "date-time", "pattern": "Z$"}
+      }
+    },
+    "profile": {
+      "type": "object", "additionalProperties": false, "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 200},
+        "mobile": {"type": ["string", "null"], "maxLength": 32},
+        "email": {"type": ["string", "null"], "format": "email", "maxLength": 254}
+      }
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "object", "additionalProperties": false, "required": ["id"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "code": {"type": "string", "minLength": 1, "maxLength": 128}
+      }
+    }
+  }
+}

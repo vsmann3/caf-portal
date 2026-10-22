@@ -1,0 +1,43 @@
+[
+  {
+    "name": "withdrawal-first",
+    "steps": [
+      "withdrawal_commit",
+      "authorization_command"
+    ],
+    "expected_decision": "denied",
+    "local_enable": false
+  },
+  {
+    "name": "authorization-first-known-withdrawal",
+    "steps": [
+      "authorization_commit",
+      "withdrawal_commit",
+      "radius_receives_withdrawal",
+      "radius_enable_attempt"
+    ],
+    "expected_decision": "authorized",
+    "local_enable": false
+  },
+  {
+    "name": "authorization-first-withdrawal-unknown",
+    "steps": [
+      "authorization_commit",
+      "withdrawal_commit",
+      "partition_delays_withdrawal",
+      "radius_enable_attempt"
+    ],
+    "expected_decision": "authorized",
+    "local_enable": "product_policy_required"
+  },
+  {
+    "name": "ambiguous-command-timeout",
+    "steps": [
+      "authorization_command",
+      "timeout",
+      "decision_not_reconciled"
+    ],
+    "expected_decision": "unknown",
+    "local_enable": false
+  }
+]

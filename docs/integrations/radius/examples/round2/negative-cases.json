@@ -1,0 +1,150 @@
+[
+  {
+    "name": "nested-customer-mismatch",
+    "fixture": "customer-master.example.json",
+    "definition": "customerMaster",
+    "path": [
+      "approved_profile",
+      "customer_id"
+    ],
+    "value": "1000000999",
+    "error": "customer_binding"
+  },
+  {
+    "name": "nested-company-mismatch",
+    "fixture": "customer-master.example.json",
+    "definition": "customerMaster",
+    "path": [
+      "approved_profile",
+      "company_ref",
+      "id"
+    ],
+    "value": "other-company",
+    "error": "company_binding"
+  },
+  {
+    "name": "nested-franchise-mismatch",
+    "fixture": "customer-master.example.json",
+    "definition": "customerMaster",
+    "path": [
+      "approved_profile",
+      "franchise_ref",
+      "id"
+    ],
+    "value": "other-franchise",
+    "error": "franchise_binding"
+  },
+  {
+    "name": "future-approved-profile",
+    "fixture": "customer-master.example.json",
+    "definition": "customerMaster",
+    "path": [
+      "approved_profile",
+      "profile_version"
+    ],
+    "value": 4,
+    "error": "future_profile"
+  },
+  {
+    "name": "future-review-base",
+    "fixture": "customer-master.example.json",
+    "definition": "customerMaster",
+    "path": [
+      "identity_review",
+      "base_profile_version"
+    ],
+    "value": 4,
+    "error": "future_review_base"
+  },
+  {
+    "name": "approval-customer-mismatch",
+    "fixture": "approval-a.example.json",
+    "definition": "exactApproval",
+    "path": [
+      "approval_event",
+      "customer_id"
+    ],
+    "value": "1000000999",
+    "error": "customer_binding"
+  },
+  {
+    "name": "approval-company-mismatch",
+    "fixture": "approval-a.example.json",
+    "definition": "exactApproval",
+    "path": [
+      "approval_event",
+      "company_ref",
+      "id"
+    ],
+    "value": "other-company",
+    "error": "company_binding"
+  },
+  {
+    "name": "approval-franchise-mismatch",
+    "fixture": "approval-a.example.json",
+    "definition": "exactApproval",
+    "path": [
+      "approval_event",
+      "franchise_ref",
+      "id"
+    ],
+    "value": "other-franchise",
+    "error": "franchise_binding"
+  },
+  {
+    "name": "approval-future-profile",
+    "fixture": "approval-a.example.json",
+    "definition": "exactApproval",
+    "path": [
+      "approval_event",
+      "customer_version"
+    ],
+    "value": 4,
+    "error": "future_profile"
+  },
+  {
+    "name": "wrong-exact-application",
+    "fixture": "approval-a.example.json",
+    "definition": "exactApproval",
+    "path": [
+      "approval_event",
+      "caf",
+      "application_id"
+    ],
+    "value": "wrong-application",
+    "error": "exact_application"
+  },
+  {
+    "name": "wrong-exact-revision",
+    "fixture": "approval-a.example.json",
+    "definition": "exactApproval",
+    "path": [
+      "approval_event",
+      "caf",
+      "revision"
+    ],
+    "value": 2,
+    "error": "exact_revision"
+  },
+  {
+    "name": "wrong-exact-approval-id",
+    "fixture": "approval-a.example.json",
+    "definition": "exactApproval",
+    "path": [
+      "approval_event",
+      "event_id"
+    ],
+    "value": "27f496c8-4ff8-4fae-bf57-74b76931afef",
+    "error": "exact_approval"
+  },
+  {
+    "name": "stale-service-approval",
+    "fixture": "approval-a.example.json",
+    "definition": "exactApproval",
+    "path": [
+      "service_approval_version"
+    ],
+    "value": 2,
+    "error": "stale_service_approval"
+  }
+]

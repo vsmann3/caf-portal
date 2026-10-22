@@ -1,0 +1,4 @@
+{
+  "error": {"code": "scope_denied", "message": "The integration credential does not permit this operation.", "retryable": false},
+  "request_id": "77f496c8-4ff8-4fae-bf57-74b76931afef"
+}

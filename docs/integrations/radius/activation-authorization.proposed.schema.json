@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:netloom:ecaf:activation-authorization:proposal-1",
+  "title": "Proposed durable CAF activation authorization; gated by unresolved product policy",
+  "$defs": {
+    "approvalRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approval_id",
+        "application_id",
+        "revision",
+        "approval_version",
+        "approved_customer_version"
+      ],
+      "properties": {
+        "approval_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "application_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "approval_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "approved_customer_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "provisioningRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "request_id",
+        "event_id"
+      ],
+      "properties": {
+        "operation": {
+          "enum": [
+            "provisionings-v1",
+            "provisionings-v2"
+          ]
+        },
+        "request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "event_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "authorizationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "activation_attempt_id",
+        "source_id",
+        "customer_id",
+        "company_ref",
+        "franchise_ref",
+        "service_request_id",
+        "radius_company_id",
+        "radius_franchise_id",
+        "radius_service_id",
+        "approval_ref",
+        "provisioning_ref"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0"
+        },
+        "activation_attempt_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "customer_id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{9}$"
+        },
+        "company_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "franchise_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "service_request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "radius_company_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "radius_franchise_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "radius_service_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "approval_ref": {
+          "$ref": "urn:netloom:ecaf:activation-authorization:proposal-1#/$defs/approvalRef"
+        },
+        "provisioning_ref": {
+          "$ref": "urn:netloom:ecaf:activation-authorization:proposal-1#/$defs/provisioningRef"
+        }
+      }
+    },
+    "authorizationDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "activation_attempt_id",
+        "authorization_id",
+        "decision",
+        "reason_code",
+        "authority_sequence",
+        "decided_at",
+        "request"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0"
+        },
+        "activation_attempt_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "authorization_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "decision": {
+          "enum": [
+            "authorized",
+            "denied"
+          ]
+        },
+        "reason_code": {
+          "enum": [
+            "approved",
+            "approval_withdrawn",
+            "approval_superseded",
+            "stale_approval",
+            "credential_acceptance_unconfirmed"
+          ]
+        },
+        "authority_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "request": {
+          "$ref": "urn:netloom:ecaf:activation-authorization:proposal-1#/$defs/authorizationRequest"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "decision": {
+                "const": "authorized"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason_code": {
+                "const": "approved"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "decision": {
+                "const": "denied"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason_code": {
+                "not": {
+                  "const": "approved"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "withdrawalMarker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "action",
+        "change_id",
+        "source_id",
+        "customer_id",
+        "company_ref",
+        "franchise_ref",
+        "service_request_id",
+        "approval_id",
+        "application_id",
+        "revision",
+        "approval_version",
+        "authority_sequence",
+        "recorded_at"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0"
+        },
+        "action": {
+          "const": "approval.withdrawn"
+        },
+        "change_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "customer_id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{9}$"
+        },
+        "company_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "franchise_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "service_request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "approval_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "application_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "approval_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "authority_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        }
+      }
+    },
+    "retentionProposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "username_hold_seconds",
+        "snapshot_ttl_seconds",
+        "feed_retention_seconds",
+        "credential_ciphertext_window_seconds",
+        "credential_deadline_anchor",
+        "extend_credential_deadline_on_retry"
+      ],
+      "properties": {
+        "username_hold_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "snapshot_ttl_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "feed_retention_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "credential_ciphertext_window_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "credential_deadline_anchor": {
+          "const": "first_capture"
+        },
+        "extend_credential_deadline_on_retry": {
+          "const": false
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "repository": "vsmann3/Netloom-Radius",
+  "commit": "1db3699e70de37e9d55efb3ff5f750b0f20348a3",
+  "caf_reviewed_commit": "05dbe819ff52a5fb022965a1113bd94981b2f167",
+  "handoff_pr": "https://github.com/vsmann3/caf-portal/pull/5",
+  "files": [
+    {
+      "file": "ecaf-event.schema.json",
+      "sha256": "4c846e4bd14472c7399e44da88f41b384a24f1dcf33969c875b805db93f6ce8d",
+      "url": "https://github.com/vsmann3/Netloom-Radius/blob/1db3699e70de37e9d55efb3ff5f750b0f20348a3/docs/integrations/ecaf-event.schema.json"
+    },
+    {
+      "file": "ecaf-event.example.json",
+      "sha256": "7811eedca6efe52c3b5c0a100a7328e6abac556b4d18a8d97828b12a31140287",
+      "url": "https://github.com/vsmann3/Netloom-Radius/blob/1db3699e70de37e9d55efb3ff5f750b0f20348a3/docs/integrations/ecaf-event.example.json"
+    },
+    {
+      "file": "ecaf-provisioning.schema.json",
+      "sha256": "b02c2ab8b76e404985b074577a8d52c3f46c38b91a2d90071516937f496c2eb7",
+      "url": "https://github.com/vsmann3/Netloom-Radius/blob/1db3699e70de37e9d55efb3ff5f750b0f20348a3/docs/integrations/ecaf-provisioning.schema.json"
+    },
+    {
+      "file": "ecaf-provisioning.example.json",
+      "sha256": "c40e3ddf921838a0fb75e24dd87c8c4e2b55859b0989ac4b8c0c728b14323448",
+      "url": "https://github.com/vsmann3/Netloom-Radius/blob/1db3699e70de37e9d55efb3ff5f750b0f20348a3/docs/integrations/ecaf-provisioning.example.json"
+    }
+  ]
+}

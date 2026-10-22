@@ -1,0 +1,7 @@
+{
+  "items": [
+    {"id": "example-caf-franchise-cuid", "company_id": "example-caf-company-cuid", "code": "INFOBB2548-F01", "name": "Example franchise", "is_active": true}
+  ],
+  "next_cursor": null,
+  "has_more": false
+}

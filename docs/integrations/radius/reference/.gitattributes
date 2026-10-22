@@ -1,0 +1,2 @@
+# Preserve pinned upstream bytes and their SHA-256 on Windows as well as Linux.
+*.json -text

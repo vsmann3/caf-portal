@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:netloom:ecaf:provisioning:1.0",
+  "title": "CAF-approved initial service provisioning",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["approval", "service"],
+  "properties": {
+    "approval": {"$ref": "urn:netloom:ecaf:customer-approved:1.0"},
+    "service": {
+      "type": "object", "additionalProperties": false,
+      "required": ["service_request_id", "reservation_id", "username", "plan_id", "initial_password"],
+      "properties": {
+        "service_request_id": {"type": "string", "format": "uuid"},
+        "reservation_id": {"type": "string", "format": "uuid"},
+        "username": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_.@-]+$"},
+        "plan_id": {"type": "string", "format": "uuid"},
+        "initial_password": {"type": "string", "minLength": 1, "maxLength": 128, "writeOnly": true, "description": "Sensitive initial network password; enforce password policy and maximum 128 UTF-8 bytes server-side. Never log."}
+      }
+    }
+  }
+}

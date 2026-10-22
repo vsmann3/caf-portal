@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "action": "approval.withdrawn",
+  "change_id": "b7f496c8-4ff8-4fae-bf57-74b76931afef",
+  "source_id": "example-caf-source",
+  "customer_id": "1000000123",
+  "company_ref": {
+    "id": "example-caf-company-cuid",
+    "code": "INFOBB2548"
+  },
+  "franchise_ref": {
+    "id": "example-caf-franchise-cuid",
+    "code": "INFOBB2548-F01"
+  },
+  "service_request_id": "e2fd6ccd-564a-4c3a-aa82-92b637679d28",
+  "approval_id": "17f496c8-4ff8-4fae-bf57-74b76931afef",
+  "application_id": "example-application-cuid",
+  "revision": 1,
+  "approval_version": 2,
+  "authority_sequence": 10,
+  "recorded_at": "2026-10-22T07:59:00Z"
+}
