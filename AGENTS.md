@@ -1,0 +1,44 @@
+# CAF Portal repository instructions
+
+## Scope and existing work
+
+- Own application changes in `E:\OpenCode\caf-portal` only. Preserve unrelated
+  tracked/untracked work. Do not edit the RADIUS developer's working tree.
+- Read `SESSION-HANDOFF.md` when present to resume local work. For CAF/RADIUS work,
+  also read `docs/integrations/radius/README.md` and
+  `docs/integrations/radius/PEER-COORDINATION.md`.
+- No production deployment, database reset, volume/upload deletion or `.env`
+  replacement is authorized by the coordination task. Validate changes with
+  isolated fixtures and report actual limitations.
+
+## CAF / RADIUS ownership
+
+- CAF owns company/franchise/operator/customer onboarding, customer master,
+  KYC/documents, reviews/revisions and customer self-service.
+- RADIUS owns AAA, services, plans, reservations, credentials, NAS, sessions,
+  network configuration and operational billing/renewals/wallets/commissions.
+- Keep the same CAF-issued permanent 10-digit Customer ID across the customer's
+  lifetime and multiple connections. Never auto-merge by name/phone/username.
+- Initial service activation requires CAF approval and valid technical provisioning.
+  Do not add an initial wallet/payment prerequisite. Pending later KYC revision
+  continuation/suspension policy remains unresolved; do not invent it or clear
+  independent service suspension/expiry.
+- Use separate databases and scoped backend APIs. Never share staff passwords,
+  document/proof data, NAS secrets or network passwords in generic projections.
+
+## Direct peer coordination
+
+Vikas explicitly authorized direct coordination with the existing RADIUS developer
+session. Use the contact and command in `PEER-COORDINATION.md`; this authorization
+does not permit editing the peer repository or deploying either application.
+
+- Notify the peer after API/schema changes, meaningful milestones and blockers.
+  Include the branch/PR, exact commit SHA, affected endpoints/payload fixtures,
+  validation performed and remaining limitations or requested decisions.
+- Propose shared interface changes through PRs and record agreement before adding
+  incompatible consumers. Preserve pinned canonical schemas until agreed updates.
+- Do not silently merge peer PRs or claim peer APIs are live from documentation.
+- Avoid acknowledgement loops: do not reply to a pure acknowledgement; send only
+  substantive decisions, new evidence, milestones, blockers or needed questions.
+- Queue success confirms delivery to the queue, not peer review or agreement.
+  Record send failures and pending decisions honestly.
