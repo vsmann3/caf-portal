@@ -292,3 +292,29 @@ Retained for future work: Surepass identity/GST APIs and original XML, customer
 mobile/email verification, customer signing, original-file ZIP/evidence packages,
 broader Indian-script fonts, and S3 migration. Existing local storage is retained.
 See README for supported formats and export limits.
+
+## CAF / RADIUS ownership clarification — 2026-10-22
+
+The owner confirmed the shared handoff in CAF PR #5 and the linked Netloom-Radius
+API contract. CAF owns company/franchise/operator/customer onboarding, customer
+master, KYC/documents, revisions and customer self-service. RADIUS owns network
+services, credentials, plans, NAS, sessions and operational billing/renewals.
+Integration uses separate databases and scoped APIs; credentials are not shared
+staff logins. See `docs/integrations/radius/README.md` for the CAF review/proposals.
+
+The 10-digit Customer ID must remain the same for the customer's entire lifetime,
+including additional CAFs/connections, renewals, relocations and reviewed transfers.
+This supersedes the earlier per-CAF interpretation and resolves the subscriber
+lifecycle requirement. The current deployed per-application uniqueness model still
+requires an explicit reusable customer-master implementation; no renumbering or
+automatic phone/name/username merges are authorized.
+
+Initial technical provisioning follows CAF approval, without a separate initial
+payment/wallet gate. Later RADIUS operations do not require CAF KYC approval.
+Only CAF-designated basic/KYC edits create pending identity revisions. Whether
+an existing active service continues during a pending KYC revision remains
+unresolved; do not implement automatic suspension/re-enable for that reason.
+
+Interface changes go through peer-reviewed PRs. Share source commit SHAs, exact
+payload examples and test results; contract documents do not establish live API
+readiness. The current review PR is documentation/fixtures only.

@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:caf:radius:read-api:proposal-1",
+  "title": "PROPOSED CAF read responses; not agreed or implemented",
+  "$defs": {
+    "cursor": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048},
+    "company": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "code", "name", "is_active"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "code": {"type": "string", "minLength": 1, "maxLength": 128},
+        "name": {"type": "string", "minLength": 1, "maxLength": 120},
+        "is_active": {"type": "boolean"}
+      }
+    },
+    "franchise": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "company_id", "code", "name", "is_active"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "company_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "code": {"type": "string", "minLength": 1, "maxLength": 128},
+        "name": {"type": "string", "minLength": 1, "maxLength": 120},
+        "is_active": {"type": "boolean"}
+      }
+    },
+    "companyPage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["items", "next_cursor", "has_more"],
+      "properties": {
+        "items": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/company"}},
+        "next_cursor": {"$ref": "#/$defs/cursor"},
+        "has_more": {"type": "boolean"}
+      },
+      "if": {"properties": {"has_more": {"const": true}}},
+      "then": {"properties": {"next_cursor": {"type": "string"}}}
+    },
+    "franchisePage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["items", "next_cursor", "has_more"],
+      "properties": {
+        "items": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/franchise"}},
+        "next_cursor": {"$ref": "#/$defs/cursor"},
+        "has_more": {"type": "boolean"}
+      },
+      "if": {"properties": {"has_more": {"const": true}}},
+      "then": {"properties": {"next_cursor": {"type": "string"}}}
+    },
+    "review": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "application_id", "revision"],
+      "properties": {
+        "status": {"enum": ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED"]},
+        "application_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "revision": {"type": "integer", "minimum": 1, "maximum": 2147483647}
+      }
+    },
+    "customerSnapshot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "customer_id", "customer_version", "company_ref", "franchise_ref", "review", "approved_snapshot"],
+      "properties": {
+        "schema_version": {"const": "1.0"},
+        "customer_id": {"type": "string", "pattern": "^[1-9][0-9]{9}$"},
+        "customer_version": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+        "company_ref": {"$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"},
+        "franchise_ref": {"$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"},
+        "review": {"$ref": "#/$defs/review"},
+        "approved_snapshot": {"oneOf": [
+          {"type": "null"}, {"$ref": "urn:netloom:ecaf:customer-approved:1.0"}
+        ]}
+      },
+      "if": {"properties": {"approved_snapshot": {"type": "object"}}},
+      "then": {"properties": {"customer_version": {"minimum": 1}}}
+    },
+    "error": {
+      "type": "object", "additionalProperties": false,
+      "required": ["error", "request_id"],
+      "properties": {
+        "request_id": {"type": "string", "format": "uuid"},
+        "error": {
+          "type": "object", "additionalProperties": false,
+          "required": ["code", "message", "retryable"],
+          "properties": {
+            "code": {"type": "string", "minLength": 1, "maxLength": 64},
+            "message": {"type": "string", "minLength": 1, "maxLength": 500},
+            "retryable": {"type": "boolean"}
+          }
+        }
+      }
+    }
+  }
+}
