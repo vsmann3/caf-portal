@@ -4,42 +4,48 @@ export interface RadiusConfig {
   enabled: boolean;
   provider: "iconwave" | "jazznetwork" | "custom";
   baseUrl?: string;
-  apiKey?: string;
   authHeader?: string;
   usernameField?: string;
   timeoutMs?: number;
 }
 
-export interface RadiusSubscriberPayload {
-  cafNumber: string;
-  companyCode: string;
-  franchiseCode?: string;
-  customerName: string;
-  mobile: string;
-  email?: string | null;
-  installationAddress: string;
-  billingAddress?: string;
-  city: string;
-  state: string;
-  pincode: string;
-  planName?: string | null;
-  bandwidth?: string | null;
-  radiusUsername?: string | null;
-  connectionType: string;
-  customerType: string;
-  idProofType: string;
-  idNumber: string;
-  serviceId?: string | null;
+export interface RadiusSettingsView extends RadiusConfig {
+  apiKeyConfigured: boolean;
+  runtimeStatus: "NOT_IMPLEMENTED";
 }
 
-export interface RadiusAdapter {
-  name: string;
-  createOrActivate(payload: RadiusSubscriberPayload): Promise<{ ok: boolean; remoteId?: string; raw?: unknown; error?: string }>;
+// Local diagnostic only. This is NOT the shared approval-event wire schema.
+export interface RadiusApprovalReference {
+  format: "caf-radius-local-reference-v1";
+  customer_id: string;
+  company_id: string;
+  franchise_id: string;
+  caf: {
+    application_id: string;
+    number: string;
+    revision: number;
+    status: "APPROVED";
+  };
 }
 
-export class NoopRadiusAdapter implements RadiusAdapter {
-  name = "noop";
-  async createOrActivate() {
-    return { ok: true, remoteId: "SKIPPED" };
-  }
+export type RadiusBlockedResult = {
+  ok: false;
+  code: "RADIUS_DISABLED" | "RADIUS_NOT_IMPLEMENTED";
+  error: string;
+};
+
+// No transport exists yet. A settings toggle must never imply provisioning.
+export function radiusBlockedResult(enabled: boolean): RadiusBlockedResult {
+  return enabled
+    ? {
+        ok: false,
+        code: "RADIUS_NOT_IMPLEMENTED",
+        error:
+          "RADIUS delivery is not implemented; no provisioning was attempted.",
+      }
+    : {
+        ok: false,
+        code: "RADIUS_DISABLED",
+        error: "RADIUS delivery is disabled; no provisioning was attempted.",
+      };
 }

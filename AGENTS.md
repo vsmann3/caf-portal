@@ -50,3 +50,15 @@ report completed work, commit/test evidence, open decisions and proposed next
 steps to the owner, then wait for further instructions/go-ahead. Do not start
 another implementation or coordination iteration merely because the peer proposes
 one. A later explicit owner task or go-ahead supersedes this checkpoint.
+
+
+## Owner resumption ? 2026-10-22
+
+Owner Vikas explicitly resumed both developers after the preceding checkpoint.
+CAF is authorized to implement the independent fake-success, secret-handling and
+minimal-payload safety fixes in a separate runtime PR, with isolated validation
+and no production deployment. See `RUNTIME-SAFETY.md` in the integration docs.
+The earlier wait no longer blocks this work. Report exact commits, compatibility
+impacts, validation and proposed next steps to the owner and peer on completion.
+Activation/withdrawal and later pending-KYC user-visible policies remain unresolved;
+do not enable unattended activation or silently choose either policy.

@@ -1,5 +1,11 @@
 # Change log
 
+## 2026-10-22: RADIUS runtime safety (proposed; not deployed)
+
+- Remove fake `SKIPPED` provisioning success. Approval now atomically records a blocked, zero-attempt local RADIUS diagnostic with only Customer ID, organization IDs and the approved CAF reference. Original CAF/PDF proof data stays intact.
+- Make RADIUS tokens write-only, encrypt on save, preserve blank inputs, support explicit removal, redact legacy values and validate settings. Tell administrators that delivery/activation are unavailable.
+- Add real API/database and Chrome safety tests. Docker production build, five isolated integration suites, six startup checks and 38 contract fixture tests passed; runtime Prisma/client remain 6.19.3. No dependency/migration/wire-schema or production changes. See `docs/integrations/radius/RUNTIME-SAFETY.md` for compatibility, payload and validation details.
+
 ## 2026-10-21: global Customer IDs and approved CAF PDF exports
 
 - Assign every saved draft/submitted CAF an automatic, globally unique 10-digit Customer ID using a non-cycling PostgreSQL sequence and registry. Preserve IDs through draft submission and rejected-CAF correction; reject client overrides. Backfill existing CAFs/drafts and add IDs to existing approval snapshots without replacing reviewed data.
