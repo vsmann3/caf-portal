@@ -77,3 +77,15 @@ task, report what changed/validation/open decisions/proposed next steps, and wai
 for further instructions or go-ahead. This was queued to RADIUS in message
 `01a161f8-b566-7a52-8e48-276f6cedd1d8`. Do not automatically begin independent
 safety fixes, foundation work or a new contract iteration after the report.
+
+
+## Owner resumption ? 2026-10-22
+
+Owner Vikas explicitly resumed both developers after the preceding checkpoint.
+CAF is authorized to implement the independent fake-success, secret-handling and
+minimal-payload safety fixes in a separate runtime PR, with isolated validation
+and no production deployment. See `RUNTIME-SAFETY.md` in the integration docs.
+The earlier wait no longer blocks this work. Report exact commits, compatibility
+impacts, validation and proposed next steps to the owner and peer on completion.
+Activation/withdrawal and later pending-KYC user-visible policies remain unresolved;
+do not enable unattended activation or silently choose either policy.

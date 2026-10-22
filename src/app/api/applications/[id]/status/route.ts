@@ -3,7 +3,11 @@ import { prisma } from "@/lib/db";
 import { requireRole, jsonError } from "@/lib/guard";
 import { reviewApplicationSchema } from "@/lib/validators";
 import { audit } from "@/lib/audit";
-import { getRadiusConfig, getRadiusAdapter, buildRadiusPayload } from "@/lib/radius";
+import {
+  radiusBlockedResult,
+  buildRadiusApprovalReference,
+} from "@/lib/radius";
+import { applicationScope } from "@/lib/caf-access";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -11,7 +15,7 @@ type Params = { params: Promise<{ id: string }> };
  * Review workflow: SUBMITTED -> UNDER_REVIEW -> APPROVED / REJECTED.
  * Only super admins and company admins may review. Franchise users may NOT
  * approve their own submissions.
- * When APPROVED and RADIUS sync is enabled, push to RADIUS (adapter-based, retry-queued).
+ * Approval records a blocked local RADIUS diagnostic atomically; no transport exists.
  */
 export async function PATCH(request: NextRequest, { params }: Params) {
   const auth = await requireRole(["SUPER_ADMIN", "COMPANY_ADMIN"]);
@@ -28,10 +32,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const existing = await prisma.customerApplication.findFirst({
     where: {
       id,
-      // Company admins may only review applications of their own company.
-      ...(auth.role === "COMPANY_ADMIN" && auth.companyId ? { companyId: auth.companyId } : {}),
+      ...applicationScope(auth),
     },
-    include: { company: true, franchise: true, documents: { orderBy: { uploadedAt: "asc" } } },
+    include: {
+      company: true,
+      franchise: true,
+      documents: { orderBy: { uploadedAt: "asc" } },
+    },
   });
   if (!existing) return jsonError(404, "Application not found");
   if (existing.status !== "SUBMITTED" && existing.status !== "UNDER_REVIEW") {
@@ -42,85 +49,80 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 
   const status =
-    action === "APPROVE" ? "APPROVED" : action === "REJECT" ? "REJECTED" : "UNDER_REVIEW";
+    action === "APPROVE"
+      ? "APPROVED"
+      : action === "REJECT"
+        ? "REJECTED"
+        : "UNDER_REVIEW";
 
-  const changed = await prisma.customerApplication.updateMany({
-    where: { id, status: existing.status, revision: existing.revision },
-    data: {
-      status,
-      reviewedById: auth.userId,
-      reviewedAt: new Date(),
-      rejectionReason: action === "REJECT" ? rejectionReason : null,
-      ...(action === "APPROVE" ? { approvedSnapshot: JSON.parse(JSON.stringify({
-        ...existing, status: "APPROVED", reviewedById: auth.userId,
-        approvedBy: { id: auth.userId, name: auth.name }, approvedAt: new Date().toISOString(),
-      })) } : {}),
-    },
-  });
-  if (!changed.count) return jsonError(409, "Application changed during review. Reload and review again.");
-  const application = await prisma.customerApplication.findUniqueOrThrow({ where: { id } });
+  const application = await prisma
+    .$transaction(async (tx) => {
+      const changed = await tx.customerApplication.updateMany({
+        where: { id, status: existing.status, revision: existing.revision },
+        data: {
+          status,
+          reviewedById: auth.userId,
+          reviewedAt: new Date(),
+          rejectionReason: action === "REJECT" ? rejectionReason : null,
+          ...(action === "APPROVE"
+            ? {
+                approvedSnapshot: JSON.parse(
+                  JSON.stringify({
+                    ...existing,
+                    status: "APPROVED",
+                    reviewedById: auth.userId,
+                    approvedBy: { id: auth.userId, name: auth.name },
+                    approvedAt: new Date().toISOString(),
+                  }),
+                ),
+              }
+            : {}),
+        },
+      });
+      if (!changed.count) return null;
+      const approved = await tx.customerApplication.findUniqueOrThrow({
+        where: { id },
+      });
+      if (action === "APPROVE") {
+        const setting = await tx.systemSetting.findUnique({
+          where: { key: "radius.config" },
+        });
+        const config = setting?.value;
+        const enabled =
+          config &&
+          typeof config === "object" &&
+          !Array.isArray(config) &&
+          config.enabled === true;
+        const blocked = radiusBlockedResult(Boolean(enabled));
+        await tx.radiusSync.create({
+          data: {
+            applicationId: id,
+            // Existing enum: FAILED + explicit reason means blocked, not attempted.
+            status: "FAILED",
+            requestPayload: JSON.parse(
+              JSON.stringify(buildRadiusApprovalReference(approved)),
+            ),
+            responsePayload: { code: blocked.code, attempted: false },
+            errorMessage: blocked.error,
+            attempts: 0,
+          },
+        });
+      }
+      return approved;
+    })
+    .catch(() =>
+      jsonError(500, "Unable to confirm review. Reload before retrying."),
+    );
+  if (application instanceof NextResponse) return application;
+  if (!application)
+    return jsonError(
+      409,
+      "Application changed during review. Reload and review again.",
+    );
 
   await audit(auth, `caf.${status.toLowerCase()}`, "CustomerApplication", id, {
     cafNumber: existing.cafNumber,
   });
-
-  // RADIUS sync on approval (event-based)
-  if (action === "APPROVE") {
-    try {
-      const config = await getRadiusConfig();
-      const sync = await prisma.radiusSync.create({
-        data: {
-          applicationId: id,
-          status: "PENDING",
-          requestPayload: buildRadiusPayload(existing, existing.franchise) as any,
-        },
-      });
-      if (config.enabled) {
-        const adapter = getRadiusAdapter(config);
-        try {
-          const res = await adapter.createOrActivate(sync.requestPayload as any);
-          await prisma.radiusSync.update({
-            where: { id: sync.id },
-            data: {
-              status: res.ok ? "SUCCESS" : "FAILED",
-              responsePayload: res.raw as object,
-              errorMessage: res.error ?? null,
-              attempts: 1,
-              lastAttemptAt: new Date(),
-              completedAt: res.ok ? new Date() : null,
-            },
-          });
-          if (res.ok) {
-            await audit(auth, "radius.sync.success", "CustomerApplication", id, {
-              cafNumber: existing.cafNumber,
-            });
-          } else {
-            await audit(auth, "radius.sync.failed", "CustomerApplication", id, {
-              cafNumber: existing.cafNumber,
-              error: res.error,
-            });
-          }
-        } catch (e) {
-          await prisma.radiusSync.update({
-            where: { id: sync.id },
-            data: {
-              status: "FAILED",
-              errorMessage: (e as Error).message,
-              attempts: 1,
-              lastAttemptAt: new Date(),
-            },
-          });
-          await audit(auth, "radius.sync.failed", "CustomerApplication", id, {
-            cafNumber: existing.cafNumber,
-            error: (e as Error).message,
-          });
-        }
-      }
-      // If disabled, sync record remains PENDING for manual/cron processing later.
-    } catch (e) {
-      console.error("RADIUS sync enqueue failed", e);
-    }
-  }
 
   return NextResponse.json({ application });
 }
