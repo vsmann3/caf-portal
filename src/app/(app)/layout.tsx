@@ -1,3 +1,4 @@
+import { demoEnabled } from "@/lib/radius-demo/common";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
@@ -42,7 +43,7 @@ export default async function AppLayout({
         companyName={company?.name}
         franchiseName={franchise?.name}
       />
-      <main className="min-w-0 flex-1 overflow-x-auto p-4 sm:p-6 lg:p-8">{children}</main>
+      <main className="min-w-0 flex-1 overflow-x-auto p-4 sm:p-6 lg:p-8">{demoEnabled() && <div className="mb-4 rounded border border-amber-400 bg-amber-50 p-3 text-sm font-semibold">ISOLATED CAF / RADIUS DEMO - synthetic customers only; no real network activation</div>}{children}</main>
     </div>
   );
 }

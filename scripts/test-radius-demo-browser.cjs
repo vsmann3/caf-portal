@@ -1,0 +1,101 @@
+// Real Chrome journey against both actual local demo apps, not protocol fixtures.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const { chromium } = require(process.argv[2] || path.join(os.tmpdir(), 'caf-browser-validation/node_modules/playwright'));
+const root = path.resolve(__dirname, '../.tools/working-demo');
+const state = JSON.parse(fs.readFileSync(path.join(root, 'state.json'), 'utf8'));
+const runtime = JSON.parse(fs.readFileSync(path.join(root, 'runtime.json'), 'utf8'));
+const peer = JSON.parse(fs.readFileSync(state.peerStatus, 'utf8').replace(/^\uFEFF/, ''));
+const connection = JSON.parse(fs.readFileSync(peer.connection_file, 'utf8').replace(/^\uFEFF/, ''));
+const access = fs.readFileSync(peer.radius_login_file, 'utf8');
+const radiusUsername = access.match(/Username:\s*([^\r\n]+)/)[1];
+const radiusPassword = access.match(/Password:\s*([^\r\n]+)/)[1];
+const artifacts = path.join(root, 'artifacts'); fs.mkdirSync(artifacts, { recursive: true });
+
+async function cafLogin(context, email) {
+  const r = await context.request.post(state.cafUrl + '/api/auth/login', { data: { email, password: runtime.adminPassword } });
+  assert.equal(r.status(), 200);
+}
+(async () => {
+  const png = await require("sharp")({ create: { width: 64, height: 64, channels: 3, background: { r: 30, g: 100, b: 180 } } }).png().toBuffer();
+  const evidence = path.join(root, "owner-test-evidence"); fs.mkdirSync(evidence, { recursive: true });
+  for (const name of ["demo-photo.png", "demo-id.png", "demo-address.png"]) fs.writeFileSync(path.join(evidence, name), png);
+  const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await cafLogin(context, 'demo-counter@caf.example.test');
+    const radius = await context.newPage();
+    await radius.goto(state.radiusUrl + '/accounts/login/');
+    await radius.locator('input[name="username"]').fill(radiusUsername);
+    await radius.locator('input[name="password"]').fill(radiusPassword);
+    await radius.locator('button[type="submit"]').click();
+    await radius.waitForURL(url => !url.pathname.includes('/accounts/login'));
+    await radius.goto(state.radiusUrl + `/companies/${connection.radius_company_id}/users/`);
+    const popup = context.waitForEvent('page');
+    await radius.getByRole('link', { name: 'Add customer using CAF form', exact: true }).click();
+    const form = await popup;
+    const errors = []; form.on('pageerror', error => errors.push(error.message));
+    form.on('dialog', dialog => dialog.accept());
+    await form.waitForURL(url => url.origin === state.cafUrl && url.pathname === '/caf/new');
+    assert.equal(new URL(form.url()).searchParams.get('companyId'), state.companyId);
+    await form.locator('[data-testid="radius-demo-form"]').waitFor({ timeout: 60000 });
+    await form.locator('#customerName').fill('Joint Browser');
+    await form.locator('#mobile').fill('9876001234');
+    await form.locator('#installationaddress-line1').fill('42 Synthetic Browser Street');
+    await form.route('**/api/addresses?pin=110001', route => route.fulfill({ json: { locations: [{ state: 'Delhi', city: 'New Delhi', locality: 'Synthetic postal office', district: 'Central Delhi' }] } }));
+    await form.locator('#installationaddress-pin').fill('110001');
+    await form.waitForFunction(() => document.querySelector('#installationaddress-city')?.value === 'New Delhi');
+    await form.locator('#idProofType').selectOption('PAN');
+    await form.locator('#idNumber').fill('ABCDE1234F');
+    const service = form.locator('[data-testid="radius-demo-form"]');
+    await service.getByLabel('Published RADIUS plan').selectOption(connection.plans[0].plan_id);
+    await service.getByLabel('Reserved service username').fill('browser' + String(Date.now()).slice(-10));
+    await service.getByRole('button', { name: 'Save draft and reserve RADIUS username', exact: true }).click();
+    await service.getByRole('button', { name: 'Username and plan reserved', exact: true }).waitFor({ timeout: 30000 });
+    const username = await service.getByLabel('Reserved service username').inputValue();
+    assert((await service.innerText()).includes('Price unavailable'));
+    for (const [i, category] of ['PASSPORT_PHOTO', 'ID_PROOF', 'ADDRESS_PROOF'].entries()) {
+      await form.getByLabel(`Document ${i + 1} file`, { exact: true }).setInputFiles({ name: 'DEMO-' + category + '.png', mimeType: 'image/png', buffer: png });
+    }
+    await form.getByRole('checkbox').last().check();
+    await form.screenshot({ path: path.join(artifacts, 'joint-form-desktop.png'), fullPage: true });
+    await form.setViewportSize({ width: 390, height: 844 });
+    assert(await form.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'Mobile form must not overflow');
+    await form.screenshot({ path: path.join(artifacts, 'joint-form-mobile.png'), fullPage: true });
+    await form.getByRole('button', { name: 'Review application', exact: true }).click();
+    await form.getByRole('heading', { name: 'Review before submitting' }).waitFor();
+    await form.getByRole('button', { name: 'Submit for approval', exact: true }).click();
+    await form.waitForURL(url => /^\/customers\/[^/]+$/.test(url.pathname));
+    const applicationId = new URL(form.url()).pathname.split('/').at(-1);
+    await form.locator('[data-testid="radius-demo-status"]').waitFor();
+    assert.equal(await form.getByRole('button', { name: 'Approve', exact: true }).count(), 0, 'Franchise cannot approve');
+    const reviewer = await browser.newContext(); await cafLogin(reviewer, 'demo-company@caf.example.test');
+    const review = await reviewer.newPage(); await review.goto(form.url());
+    await review.getByRole('button', { name: 'Approve', exact: true }).click();
+    await review.getByText('Staged - credentials accepted; service disabled', { exact: true }).waitFor({ timeout: 60000 });
+    const statusResponse = await review.request.get(state.cafUrl + `/api/radius-demo/status?applicationId=${applicationId}`);
+    const status = await statusResponse.json(); assert.equal(status.state, 'STAGED'); assert.equal(status.credentialAccepted, true); assert.equal(status.networkActive, false);
+    await review.screenshot({ path: path.join(artifacts, 'joint-staged-receipt.png'), fullPage: true });
+    const download = review.waitForEvent('download', { timeout: 60000 });
+    await review.getByRole('button', { name: 'Download CAF + documents PDF', exact: true }).click();
+    const pdf = await download; assert(pdf.suggestedFilename().includes(status.customerId));
+    await pdf.saveAs(path.join(artifacts, 'joint-approved.pdf'));
+    const unsafe = new URL(review.url()); unsafe.searchParams.set('returnTo', 'https://untrusted.invalid/'); await review.goto(unsafe.href);
+    assert.equal(await review.getByRole('link', { name: 'Back to RADIUS demo', exact: true }).count(), 0, 'Untrusted callback must be rejected');
+    await form.reload();
+    await form.getByRole('link', { name: 'Back to RADIUS demo', exact: true }).click();
+    await form.waitForURL(url => url.origin === state.radiusUrl);
+    await form.goto(state.radiusUrl + `/companies/${connection.radius_company_id}/users/`);
+    await form.locator('input[name="account_id"]').fill(status.customerId);
+    await form.getByRole('button', { name: 'Apply filters', exact: true }).click();
+    await form.setViewportSize({ width: 1440, height: 1000 });
+    await form.getByText(username, { exact: true }).first().waitFor();
+    assert((await form.locator('body').innerText()).includes(status.customerId));
+    await form.screenshot({ path: path.join(artifacts, 'joint-radius-customer-id.png'), fullPage: true });
+    assert.deepEqual(errors, []);
+    fs.writeFileSync(path.join(root, 'browser-result.json'), JSON.stringify({ verified: true, applicationId, customerId: status.customerId, username, mode: 'STAGED_NO_REAL_NETWORK', testedAt: new Date().toISOString() }, null, 2));
+    console.log('PASS: actual Chrome Radius new-tab entry, existing CAF form/plans/reservation/evidence/submission, reviewer approval, staged receipt, combined PDF, rejected open redirect, matching Customer ID on Radius and desktop/mobile layout');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error.stack); process.exitCode = 1; });

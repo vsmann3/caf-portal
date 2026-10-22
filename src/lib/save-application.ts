@@ -18,6 +18,7 @@ import {
 import { getActiveProvider } from "@/lib/storage";
 import { cafNumber } from "@/lib/codes";
 import { audit } from "@/lib/audit";
+import { requireDemo, planSchema } from "@/lib/radius-demo/common";
 
 const types: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -178,7 +179,46 @@ export async function saveApplication(request: NextRequest) {
           update: { value: { increment: 1 } },
           create: { key: `caf-seq:${franchise.companyId}`, value: 1 },
         });
-        let username = previous?.broadbandUsername || "";
+        const linkedIntent = data.draftId
+          ? await tx.radiusDemoIntent.findUnique({
+              where: { draftId: data.draftId },
+            })
+          : previous
+            ? await tx.radiusDemoIntent.findUnique({
+                where: { applicationId: previous.id },
+              })
+            : null;
+        if (linkedIntent && data.radiusDemoIntentId !== linkedIntent.id)
+          throw new ApiError(
+            409,
+            "Reserved CAF must retain its RADIUS service binding",
+          );
+        const demoIntent = data.radiusDemoIntentId
+          ? await tx.radiusDemoIntent.findUnique({
+              where: { id: data.radiusDemoIntentId },
+            })
+          : null;
+        if (data.radiusDemoIntentId) {
+          requireDemo();
+          if (
+            !demoIntent ||
+            demoIntent.ownerId !== auth.userId ||
+            demoIntent.companyId !== franchise.companyId ||
+            demoIntent.franchiseId !== franchise.id ||
+            (previous
+              ? demoIntent.applicationId !== previous.id
+              : demoIntent.draftId !== data.draftId ||
+                demoIntent.applicationId !== null) ||
+            !demoIntent.reservationExpiresAt ||
+            demoIntent.reservationExpiresAt.getTime() <= Date.now()
+          )
+            throw new ApiError(
+              409,
+              "RADIUS reservation is unavailable or expired. Reconcile it before submitting.",
+            );
+        }
+        let username =
+          demoIntent?.username || previous?.broadbandUsername || "";
         if (!username) {
           const candidates = usernameCandidates(data.customerName, data.mobile);
           candidates.push(
@@ -192,6 +232,19 @@ export async function saveApplication(request: NextRequest) {
               tx,
             )) ?? "";
         }
+        if (
+          demoIntent &&
+          !(await availableUsername(
+            franchise.companyId,
+            [username],
+            previous?.id,
+            tx,
+          ))
+        )
+          throw new ApiError(
+            409,
+            "Reserved username now exists in this company",
+          );
         if (!username)
           throw new ApiError(
             409,
@@ -222,8 +275,8 @@ export async function saveApplication(request: NextRequest) {
           idNumber: data.idNumber,
           connectionType: data.connectionType,
           customerType: data.customerType ?? "RESIDENTIAL",
-          planName: data.planName || null,
-          bandwidth: data.bandwidth || null,
+          planName: demoIntent ? planSchema.parse(demoIntent.plan).name : data.planName || null,
+          bandwidth: demoIntent ? `${planSchema.parse(demoIntent.plan).download_kbps} kbps` : data.bandwidth || null,
           broadbandUsername: username,
           remarks: data.remarks || null,
           declarationAcceptedAt: new Date(),
@@ -289,9 +342,12 @@ export async function saveApplication(request: NextRequest) {
           const customerId =
             draft?.customerId ??
             (await tx.customerNumber.create({ data: {} })).id;
+          if (demoIntent && customerId !== demoIntent.customerId)
+            throw new ApiError(409, "Customer ID changed after reservation");
           app = await tx.customerApplication.create({
             data: {
               ...fields,
+              ...(demoIntent ? { serviceRequestId: demoIntent.id } : {}),
               customerId,
               cafNumber: cafNumber(
                 franchise.company.companyCode,
@@ -303,6 +359,21 @@ export async function saveApplication(request: NextRequest) {
             },
           });
         }
+        if (demoIntent)
+          await tx.radiusDemoIntent.update({
+            where: { id: demoIntent.id },
+            data: { applicationId: app.id, state: "ATTACHED" },
+          });
+        const master = await tx.customerNumber.findUniqueOrThrow({
+          where: { id: app.customerId },
+        });
+        if (master.companyId && master.companyId !== app.companyId)
+          throw new ApiError(409, "Customer company binding mismatch");
+        if (!master.companyId)
+          await tx.customerNumber.update({
+            where: { id: app.customerId },
+            data: { companyId: app.companyId, franchiseId: app.franchiseId },
+          });
         for (const upload of saved)
           await tx.document.create({
             data: {

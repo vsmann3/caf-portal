@@ -172,6 +172,7 @@ async function main() {
     const customer = await db.customerNumber.create({ data: {} });
     const data = {
       ...template,
+      serviceRequestId: undefined,
       id: undefined,
       customerId: customer.id,
       cafNumber: "RADIUS-" + customer.id,

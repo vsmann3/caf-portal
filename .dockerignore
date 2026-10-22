@@ -10,3 +10,6 @@ node_modules
 Dockerfile
 docker-compose.yml
 README.md
+
+# Private local-demo credentials, databases and generated artifacts.
+.tools/

@@ -11,3 +11,6 @@ build
 .DS_Store
 tsconfig.tsbuildinfo
 next-env.d.ts
+
+# Private isolated demo state, credentials and generated application copies.
+.tools/

@@ -50,6 +50,23 @@ export async function POST(request: NextRequest) {
   const franchise = await filingFranchise(auth, String(payload.franchiseId));
   if (!franchise) return jsonError(404, "Franchise not found");
   if (id) {
+    const currentDraft = await prisma.cafDraft.findFirst({
+      where: { id, ownerId: auth.userId },
+    });
+    if (currentDraft && currentDraft.companyId !== franchise.companyId)
+      return jsonError(409, "Start a new draft to change company");
+    const reserved = await prisma.radiusDemoIntent.findUnique({
+      where: { draftId: id },
+    });
+    if (
+      reserved &&
+      (reserved.ownerId !== auth.userId ||
+        reserved.franchiseId !== franchise.id)
+    )
+      return jsonError(
+        409,
+        "Reserved draft cannot change franchise. Start a new draft.",
+      );
     const result = await prisma.cafDraft.updateMany({
       where: {
         id,
@@ -79,7 +96,9 @@ export async function POST(request: NextRequest) {
       companyId: franchise.companyId,
       franchiseId: franchise.id,
       payload,
-      customerNumber: { create: {} },
+      customerNumber: {
+        create: { companyId: franchise.companyId, franchiseId: franchise.id },
+      },
     },
   });
   return NextResponse.json({ draft }, { status: 201 });
