@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "cursor_expired",
+    "message": "Create a new scoped snapshot before resuming changes.",
+    "retryable": false
+  },
+  "request_id": "77f496c8-4ff8-4fae-bf57-74b76931afef"
+}

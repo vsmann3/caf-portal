@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "customer_id": "1000000123",
+  "customer_version": 3,
+  "company_ref": {
+    "id": "example-caf-company-cuid",
+    "code": "INFOBB2548"
+  },
+  "franchise_ref": {
+    "id": "example-caf-franchise-cuid",
+    "code": "INFOBB2548-F01"
+  },
+  "application_id": "example-application-cuid",
+  "revision": 1,
+  "service_request_id": "e2fd6ccd-564a-4c3a-aa82-92b637679d28",
+  "approval_id": "17f496c8-4ff8-4fae-bf57-74b76931afef",
+  "approval_status": "WITHDRAWN",
+  "approval_version": 2,
+  "service_approval_version": 2,
+  "updated_at": "2026-10-22T06:00:00Z",
+  "approval_event": {
+    "schema_version": "1.0",
+    "event_id": "17f496c8-4ff8-4fae-bf57-74b76931afef",
+    "event_type": "customer.approved",
+    "occurred_at": "2026-10-22T03:00:00Z",
+    "customer_version": 1,
+    "customer_id": "1000000123",
+    "company_ref": {
+      "id": "example-caf-company-cuid",
+      "code": "INFOBB2548"
+    },
+    "franchise_ref": {
+      "id": "example-caf-franchise-cuid",
+      "code": "INFOBB2548-F01"
+    },
+    "caf": {
+      "application_id": "example-application-cuid",
+      "number": "INFOBB2548-CAF-EXAMPLE",
+      "revision": 1,
+      "status": "APPROVED",
+      "approved_at": "2026-10-22T03:00:00Z"
+    },
+    "profile": {
+      "name": "Example Customer",
+      "mobile": null,
+      "email": null
+    }
+  }
+}

@@ -2,6 +2,11 @@
 
 Status: **proposal for peer review; no runtime integration is enabled by this PR**.
 
+Follow-up: [ROUND2-RESPONSE.md](ROUND2-RESPONSE.md) responds to RADIUS review
+`c57ac35`. Its separated customer-profile/application proposal supersedes the
+initial singular review/approved-snapshot shape below. Accepted directory shapes
+and pinned canonical approval/provisioning schemas are unchanged.
+
 CAF review of [handoff PR #5](https://github.com/vsmann3/caf-portal/pull/5),
 [canonical handoff](https://github.com/vsmann3/Netloom-Radius/blob/1db3699e70de37e9d55efb3ff5f750b0f20348a3/CAF-RADIUS-TEAM-HANDOFF.md),
 [API contract](https://github.com/vsmann3/Netloom-Radius/blob/1db3699e70de37e9d55efb3ff5f750b0f20348a3/docs/integrations/ecaf-api-contract.md)

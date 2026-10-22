@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "customer_id": "1000000123",
+  "customer_version": 3,
+  "company_ref": {
+    "id": "example-caf-company-cuid",
+    "code": "INFOBB2548"
+  },
+  "franchise_ref": {
+    "id": "example-caf-franchise-cuid",
+    "code": "INFOBB2548-F01"
+  },
+  "identity_review": {
+    "review_id": "example-profile-review",
+    "status": "PENDING_REVIEW",
+    "base_profile_version": 3,
+    "draft_id": null,
+    "revision_id": "example-profile-revision-4"
+  },
+  "approved_profile": {
+    "profile_id": "example-approved-profile-3",
+    "customer_id": "1000000123",
+    "company_ref": {
+      "id": "example-caf-company-cuid",
+      "code": "INFOBB2548"
+    },
+    "franchise_ref": {
+      "id": "example-caf-franchise-cuid",
+      "code": "INFOBB2548-F01"
+    },
+    "profile_version": 3,
+    "approved_at": "2026-10-22T05:00:00Z",
+    "profile": {
+      "name": "Example Current Approved Customer",
+      "mobile": null,
+      "email": null
+    }
+  }
+}

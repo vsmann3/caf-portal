@@ -1,0 +1,40 @@
+{
+  "schema_version": "2.0",
+  "provisioning_request_id": "37f496c8-4ff8-4fae-bf57-74b76931afef",
+  "supersedes_request_id": null,
+  "approval": {
+    "schema_version": "1.0",
+    "event_id": "17f496c8-4ff8-4fae-bf57-74b76931afef",
+    "event_type": "customer.approved",
+    "occurred_at": "2026-10-22T03:00:00Z",
+    "customer_version": 1,
+    "customer_id": "1000000123",
+    "company_ref": {
+      "id": "example-caf-company-cuid",
+      "code": "INFOBB2548"
+    },
+    "franchise_ref": {
+      "id": "example-caf-franchise-cuid",
+      "code": "INFOBB2548-F01"
+    },
+    "caf": {
+      "application_id": "example-application-cuid",
+      "number": "INFOBB2548-CAF-EXAMPLE",
+      "revision": 1,
+      "status": "APPROVED",
+      "approved_at": "2026-10-22T03:00:00Z"
+    },
+    "profile": {
+      "name": "Example Customer",
+      "mobile": null,
+      "email": null
+    }
+  },
+  "service": {
+    "service_request_id": "e2fd6ccd-564a-4c3a-aa82-92b637679d28",
+    "reservation_id": "a35f6bbb-2f68-4c98-92a2-2a0651e9c638",
+    "username": "example.customer",
+    "plan_id": "e1ab5adb-4b76-4919-9ffb-59c029d4fb54",
+    "initial_password": "EXAMPLE-ONLY-not-a-live-password-42!"
+  }
+}

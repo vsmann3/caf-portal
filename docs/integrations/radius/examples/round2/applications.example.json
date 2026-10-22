@@ -1,0 +1,32 @@
+{
+  "items": [
+    {
+      "application_id": "example-application-cuid",
+      "caf_number": "INFOBB2548-CAF-EXAMPLE",
+      "revision": 1,
+      "service_request_id": "e2fd6ccd-564a-4c3a-aa82-92b637679d28",
+      "review_status": "APPROVED",
+      "latest_approval": {
+        "approval_id": "17f496c8-4ff8-4fae-bf57-74b76931afef",
+        "revision": 1,
+        "approval_version": 1,
+        "approval_status": "APPROVED"
+      }
+    },
+    {
+      "application_id": "example-connection-b-application",
+      "caf_number": "INFOBB2548-CAF-B",
+      "revision": 1,
+      "service_request_id": "f2fd6ccd-564a-4c3a-aa82-92b637679d28",
+      "review_status": "APPROVED",
+      "latest_approval": {
+        "approval_id": "27f496c8-4ff8-4fae-bf57-74b76931afef",
+        "revision": 1,
+        "approval_version": 1,
+        "approval_status": "APPROVED"
+      }
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false
+}

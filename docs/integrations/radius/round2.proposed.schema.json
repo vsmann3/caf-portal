@@ -1,0 +1,1088 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:caf:radius:interfaces:proposal-2",
+  "title": "Round-two CAF/RADIUS proposals; not implemented or frozen",
+  "$defs": {
+    "identityReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_id",
+        "status",
+        "base_profile_version",
+        "draft_id",
+        "revision_id"
+      ],
+      "properties": {
+        "review_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "status": {
+          "enum": [
+            "DRAFT",
+            "PENDING_REVIEW"
+          ]
+        },
+        "base_profile_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "draft_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          ]
+        },
+        "revision_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "DRAFT"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "draft_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revision_id": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "PENDING_REVIEW"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "draft_id": {
+                "type": "null"
+              },
+              "revision_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            }
+          }
+        }
+      ]
+    },
+    "approvedProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "customer_id",
+        "company_ref",
+        "franchise_ref",
+        "profile_version",
+        "approved_at",
+        "profile"
+      ],
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "customer_id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{9}$"
+        },
+        "company_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "franchise_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "profile_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "approved_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "profile": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/properties/profile"
+        }
+      }
+    },
+    "customerMaster": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "customer_id",
+        "customer_version",
+        "company_ref",
+        "franchise_ref",
+        "identity_review",
+        "approved_profile"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0"
+        },
+        "customer_id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{9}$"
+        },
+        "customer_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "company_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "franchise_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "identity_review": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "urn:caf:radius:interfaces:proposal-2#/$defs/identityReview"
+            }
+          ]
+        },
+        "approved_profile": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "urn:caf:radius:interfaces:proposal-2#/$defs/approvedProfile"
+            }
+          ]
+        }
+      }
+    },
+    "exactApproval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "customer_id",
+        "customer_version",
+        "company_ref",
+        "franchise_ref",
+        "application_id",
+        "revision",
+        "service_request_id",
+        "approval_id",
+        "approval_status",
+        "approval_version",
+        "service_approval_version",
+        "updated_at",
+        "approval_event"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0"
+        },
+        "customer_id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{9}$"
+        },
+        "customer_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "company_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "franchise_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "application_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "service_request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "approval_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "approval_status": {
+          "enum": [
+            "APPROVED",
+            "WITHDRAWN",
+            "SUPERSEDED"
+          ]
+        },
+        "approval_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "service_approval_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "approval_event": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0"
+        }
+      }
+    },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "application_id",
+        "caf_number",
+        "revision",
+        "service_request_id",
+        "review_status",
+        "latest_approval"
+      ],
+      "properties": {
+        "application_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "caf_number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "service_request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "review_status": {
+          "enum": [
+            "SUBMITTED",
+            "UNDER_REVIEW",
+            "APPROVED",
+            "REJECTED"
+          ]
+        },
+        "latest_approval": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "approval_id",
+                "revision",
+                "approval_version",
+                "approval_status"
+              ],
+              "properties": {
+                "approval_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "approval_version": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "approval_status": {
+                  "enum": [
+                    "APPROVED",
+                    "WITHDRAWN",
+                    "SUPERSEDED"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "applicationPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "next_cursor",
+        "has_more"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "urn:caf:radius:interfaces:proposal-2#/$defs/application"
+          }
+        },
+        "next_cursor": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            }
+          ]
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      },
+      "if": {
+        "properties": {
+          "has_more": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_id",
+        "radius_company_id",
+        "name",
+        "version",
+        "active",
+        "download_kbps",
+        "upload_kbps",
+        "validity"
+      ],
+      "properties": {
+        "plan_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "radius_company_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "download_kbps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "upload_kbps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "validity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "duration_seconds",
+            "starts_at"
+          ],
+          "properties": {
+            "duration_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "starts_at": {
+              "const": "activation"
+            }
+          }
+        },
+        "price": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "amount_minor",
+            "minor_unit_exponent"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            },
+            "amount_minor": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "minor_unit_exponent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            }
+          }
+        }
+      }
+    },
+    "planPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "next_cursor",
+        "has_more"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "urn:caf:radius:interfaces:proposal-2#/$defs/plan"
+          }
+        },
+        "next_cursor": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            }
+          ]
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      },
+      "if": {
+        "properties": {
+          "has_more": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        }
+      }
+    },
+    "reservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "customer_id",
+        "company_ref",
+        "franchise_ref",
+        "radius_company_id",
+        "radius_franchise_id",
+        "reservation_id",
+        "service_request_id",
+        "username",
+        "plan_id",
+        "plan_version",
+        "expires_at"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "customer_id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{9}$"
+        },
+        "company_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "franchise_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "radius_company_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "radius_franchise_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "reservation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "service_request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9_.@-]+$"
+        },
+        "plan_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "plan_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        }
+      }
+    },
+    "provisioningReceiptV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "customer_id",
+        "company_ref",
+        "franchise_ref",
+        "radius_company_id",
+        "radius_franchise_id",
+        "event_id",
+        "service_request_id",
+        "receipt_version",
+        "receipt_status",
+        "credential_accepted",
+        "service_id",
+        "service_status",
+        "error"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "customer_id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{9}$"
+        },
+        "company_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "franchise_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "radius_company_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "radius_franchise_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "event_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "service_request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "receipt_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "receipt_status": {
+          "enum": [
+            "accepted",
+            "processing",
+            "applied",
+            "ignored",
+            "blocked",
+            "failed",
+            "superseded"
+          ]
+        },
+        "credential_accepted": {
+          "type": "boolean"
+        },
+        "service_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "format": "uuid"
+            }
+          ]
+        },
+        "service_status": {
+          "enum": [
+            "pending_service_setup",
+            "active",
+            "blocked",
+            "failed"
+          ]
+        },
+        "error": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "service_status": {
+                "const": "active"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "credential_accepted": {
+                "const": true
+              },
+              "service_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "provisioningRequestV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "provisioning_request_id",
+        "supersedes_request_id",
+        "approval",
+        "service"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "2.0"
+        },
+        "provisioning_request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "supersedes_request_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "format": "uuid"
+            }
+          ]
+        },
+        "approval": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0"
+        },
+        "service": {
+          "$ref": "urn:netloom:ecaf:provisioning:1.0#/properties/service"
+        }
+      }
+    },
+    "provisioningReceiptV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "customer_id",
+        "company_ref",
+        "franchise_ref",
+        "radius_company_id",
+        "radius_franchise_id",
+        "event_id",
+        "service_request_id",
+        "receipt_version",
+        "receipt_status",
+        "credential_accepted",
+        "service_id",
+        "service_status",
+        "error",
+        "schema_version",
+        "provisioning_request_id"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "customer_id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{9}$"
+        },
+        "company_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "franchise_ref": {
+          "$ref": "urn:netloom:ecaf:customer-approved:1.0#/$defs/reference"
+        },
+        "radius_company_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "radius_franchise_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "event_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "service_request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "receipt_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "receipt_status": {
+          "enum": [
+            "accepted",
+            "processing",
+            "applied",
+            "ignored",
+            "blocked",
+            "failed",
+            "superseded"
+          ]
+        },
+        "credential_accepted": {
+          "type": "boolean"
+        },
+        "service_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "format": "uuid"
+            }
+          ]
+        },
+        "service_status": {
+          "enum": [
+            "pending_service_setup",
+            "active",
+            "blocked",
+            "failed"
+          ]
+        },
+        "error": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              }
+            }
+          ]
+        },
+        "schema_version": {
+          "const": "2.0"
+        },
+        "provisioning_request_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "service_status": {
+                "const": "active"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "credential_accepted": {
+                "const": true
+              },
+              "service_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "bootstrapStart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_id",
+        "expires_at",
+        "continuation_cursor"
+      ],
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "continuation_cursor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "bootstrapPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "next_cursor",
+        "has_more",
+        "snapshot_id",
+        "expires_at",
+        "continuation_cursor"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "resource_type",
+                  "resource"
+                ],
+                "properties": {
+                  "resource_type": {
+                    "const": "customer"
+                  },
+                  "resource": {
+                    "$ref": "urn:caf:radius:interfaces:proposal-2#/$defs/customerMaster"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "resource_type",
+                  "resource"
+                ],
+                "properties": {
+                  "resource_type": {
+                    "const": "application_approval"
+                  },
+                  "resource": {
+                    "$ref": "urn:caf:radius:interfaces:proposal-2#/$defs/exactApproval"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "next_cursor": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            }
+          ]
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "snapshot_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "continuation_cursor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "if": {
+        "properties": {
+          "has_more": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        }
+      }
+    }
+  }
+}

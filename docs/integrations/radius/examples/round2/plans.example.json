@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "plan_id": "e1ab5adb-4b76-4919-9ffb-59c029d4fb54",
+      "radius_company_id": "10001",
+      "name": "Example 300 Mbps 30-day fixed duration",
+      "version": 7,
+      "active": true,
+      "download_kbps": 300000,
+      "upload_kbps": 300000,
+      "validity": {
+        "duration_seconds": 2592000,
+        "starts_at": "activation"
+      },
+      "price": {
+        "currency": "INR",
+        "amount_minor": 99900,
+        "minor_unit_exponent": 2
+      }
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false
+}

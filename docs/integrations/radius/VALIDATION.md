@@ -24,3 +24,27 @@ retry/receipt behavior or automatic activation was implemented/tested by this PR
 The examples are synthetic. No Docker rebuild is needed for this documentation
 and test-only change. Existing application code and dependency locks are unchanged.
 Runtime and joint acceptance tests remain required for the implementation PRs.
+
+## Round-two response to RADIUS c57ac35
+
+Command: `python scripts/test-radius-round2-contract.py` with the same test-only
+dependency. **16 additional tests passed**, alongside all nine baseline tests.
+
+Coverage: proposed schema/17 positive payload fixtures; 13 structurally valid
+negative mutation fixtures for cross-field customer/company/franchise/version/
+exact-approval checks; correctly labelled draft references; no pending identity
+values/credentials; both A/B delivery orders preserving profile version 3 while
+retaining valid older A; withdrawn A state; fixed-duration validity and integer
+minor-unit prices; required reservation bindings; reservation-only v2 replacement
+with unchanged approval/service/password; accepted/unknown/changed-predecessor
+rejection; monotonic credential acceptance despite setup failure; operation-specific
+receipt IDs; stable snapshot boundary and continuation on empty bootstrap pages.
+Additional cases reject partial/mixed snapshot checkpoints and changed replacement
+scope/plan-version/approval; equal profile versions allow different connections
+with identical identity data while rejecting conflicting identity values.
+
+These semantic helpers are executable protocol expectations over synthetic data,
+not production authorization, transaction locks, HMAC implementation, RADIUS
+delivery code or activation-race protection. The exact-GET versus concurrent
+withdrawal/activation fencing issue and remaining interface agreements are recorded
+in `ROUND2-RESPONSE.md`. Existing pinned canonical schema hashes are unchanged.
