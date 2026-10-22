@@ -98,3 +98,11 @@ RADIUS subscriber stays SUSPENDED. Production policy, deployment and owner
 acceptance are not implied by these tests. Follow [WORKING-MODEL.md](WORKING-MODEL.md)
 to test the existing form journey and return expected versus actual behavior.
 Await owner feedback before calling the milestone accepted.
+
+## Owner checkpoint outcome
+
+Vikas reported that he tried the local model and approved pushing the tested CAF
+changes to GitHub `main`. This accepts the demonstrated isolated STAGED journey
+and authorizes the repository merge. It does not establish production integration
+readiness or resolve withdrawal/later-KYC policy. No production deployment or
+integration enablement is performed by this merge; demo-only gates remain intact.

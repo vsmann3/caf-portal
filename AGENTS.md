@@ -79,3 +79,9 @@ runtime repository. Do not stop this authorized implementation at documentation.
 After each developed milestone, complete automated checks, then ask Vikas to test
 with the exact environment/URL, safe steps and expected results. Await his feedback
 before calling it owner accepted. Do not mistake CI success for deployed readiness.
+
+Vikas subsequently tested the local working model and explicitly authorized
+merging the tested CAF changes into GitHub main. The isolated STAGED milestone is
+owner accepted. This authorization supersedes the repository-merge wait only;
+production deployment/enablement and unresolved activation/withdrawal/later-KYC
+policies are separate work and must not be inferred from the main merge.
