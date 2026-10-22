@@ -7,6 +7,12 @@ Follow-up: [ROUND2-RESPONSE.md](ROUND2-RESPONSE.md) responds to RADIUS review
 initial singular review/approved-snapshot shape below. Accepted directory shapes
 and pinned canonical approval/provisioning schemas are unchanged.
 
+Latest: [ROUND3-AUTHORIZATION.md](ROUND3-AUTHORIZATION.md) responds to RADIUS
+`4a103dc`, with authorization schemas, ordering fixtures, replacement/replay
+invariants and bounded credential recovery proposals. The logical authority point
+is accepted technically; post-authorization withdrawal behavior still requires
+the owner's decision before unattended activation.
+
 CAF review of [handoff PR #5](https://github.com/vsmann3/caf-portal/pull/5),
 [canonical handoff](https://github.com/vsmann3/Netloom-Radius/blob/1db3699e70de37e9d55efb3ff5f750b0f20348a3/CAF-RADIUS-TEAM-HANDOFF.md),
 [API contract](https://github.com/vsmann3/Netloom-Radius/blob/1db3699e70de37e9d55efb3ff5f750b0f20348a3/docs/integrations/ecaf-api-contract.md)

@@ -69,3 +69,11 @@ later pending KYC review remains unresolved.
 
 No production changes are requested. Each developer preserves existing work and
 edits only its own application repository. No cross-database access or silent merges.
+
+## Owner checkpoint
+
+On 2026-10-22 the owner instructed both developers to finish the current coordination
+task, report what changed/validation/open decisions/proposed next steps, and wait
+for further instructions or go-ahead. This was queued to RADIUS in message
+`01a161f8-b566-7a52-8e48-276f6cedd1d8`. Do not automatically begin independent
+safety fixes, foundation work or a new contract iteration after the report.

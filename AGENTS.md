@@ -42,3 +42,11 @@ does not permit editing the peer repository or deploying either application.
   substantive decisions, new evidence, milestones, blockers or needed questions.
 - Queue success confirms delivery to the queue, not peer review or agreement.
   Record send failures and pending decisions honestly.
+
+## Owner checkpoint — 2026-10-22
+
+After the current authorization/schema coordination task, both developers must
+report completed work, commit/test evidence, open decisions and proposed next
+steps to the owner, then wait for further instructions/go-ahead. Do not start
+another implementation or coordination iteration merely because the peer proposes
+one. A later explicit owner task or go-ahead supersedes this checkpoint.

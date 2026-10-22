@@ -48,3 +48,26 @@ not production authorization, transaction locks, HMAC implementation, RADIUS
 delivery code or activation-race protection. The exact-GET versus concurrent
 withdrawal/activation fencing issue and remaining interface agreements are recorded
 in `ROUND2-RESPONSE.md`. Existing pinned canonical schema hashes are unchanged.
+
+## Authorization response to RADIUS 4a103dc
+
+Command: `python scripts/test-radius-authorization-contract.py`.
+**13 additional offline tests passed; all 38 tests (9 + 16 + 13) pass.**
+
+Coverage: authorization request/decision/withdrawal/retention schema fixtures;
+directory definitions unchanged from the accepted proposal; default activation
+policy gate; withdrawal-before-authorization denial; immutable grant retries and
+known later withdrawal; explicit counterexample for an unknown later withdrawal;
+idempotency/conflicting attempt checks; nested receipt/attempt/scope consistency;
+no credentials/documents in authorization; absent/null contact normalization with
+distinct whole-request replay material; current-leaf/fork/cycle/self/namespace/key/
+plan checks; synthetic cross-v1/v2 acceptance tombstone after receipt archival;
+absolute credential deadline and immediate acceptance purge expectations.
+
+These are single-process synthetic protocol models, not database concurrency,
+source-token authentication, cryptographic JCS/HMAC/key rotation, ciphertext
+erasure, distributed commit/fencing or production authorization tests. The model
+deliberately exposes the unresolved product case rather than claiming a guarantee.
+No normal database transaction is held over HTTP and no runtime integration was
+implemented. Owner instructed both developers to report and wait after completing
+this coordination task; further implementation needs a new go-ahead.
