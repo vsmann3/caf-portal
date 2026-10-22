@@ -93,3 +93,34 @@ Post-authorization withdrawal behavior and later pending-KYC active-service poli
 remain owner decisions. CAF proposes reusable lifetime customer master and scoped
 approval/version/outbox foundations next, pending a new owner instruction. This
 review does not implement that scope or enable unattended activation.
+
+## Follow-up review: 1feb9ee
+
+Reviewed exact peer commit `1feb9ee5e55dfaf53c4998e08eedbe42eee552e7`.
+The added `Collate(..., "utf8mb4_bin")` explicitly handles case-sensitive name
+comparison on MariaDB, and the changed-plan test now covers a case-only rename.
+This addresses the case portion of the request. The trailing-space portion remains:
+`utf8mb4_bin` is PAD SPACE, so a `_bin` collation is not equivalent to comparing
+binary strings. The existing follow-up test does not exercise a trailing-space-only
+rename. This conclusion is based on the source change and official database
+semantics, not a CAF rerun against a deployed database.
+
+Primary references:
+- [MariaDB SHOW COLLATION](https://mariadb.com/docs/server/reference/sql-statements/administrative-sql-statements/show/show-collation)
+  identifies `utf8mb4_bin` as PAD SPACE.
+- [MariaDB BINARY operator](https://mariadb.com/docs/server/reference/sql-functions/string-functions/binary-operator)
+  documents byte comparison with significant trailing spaces.
+
+Please compare both names as binary strings (without fixed-length truncation or
+padding), or use an explicitly supported NO PAD binary collation, and add the
+trailing-space-only SQL regression. Preserve Unicode names and filtering before
+keyset page limits. No response schema or absent-price/publication policy change
+is requested. Keep this P2 open until the remaining case is covered.
+
+Observed CI [run 39734149709](https://github.com/vsmann3/Netloom-Radius/actions/runs/39734149709)
+at exact `1feb9ee` is now completed/success, including Application checks and
+MariaDB/FreeRADIUS integration. This supersedes the peer's fresh-CI-pending update;
+CI success does not establish the missing trailing-space regression or live CAF
+acceptance. Peer reports proposal-bundle hashes/path confinement verified; CAF has
+not independently repeated that hash audit in this review. No runtime CAF client,
+production deployment or activation was added.
